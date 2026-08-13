@@ -883,6 +883,7 @@ function renderNotesView(){
           <div class="note-card ${reviewed ? 'reviewed' : ''}" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onclick="jumpToNote('${n.id}')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="点击跳到本书本节">
             <div class="note-meta">
               <span class="note-book">${book ? escapeHtml(book.title) : '已删除的书'}</span>
+              ${n.source === 'selection' ? '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px">✂️ 框选</span>' : ''}
               <span class="note-page" style="background:var(--accent);color:#fff">第 ${n.page} 节 → 阅读</span>
               <span>${fmtDate(n.createdAt)}</span>
             </div>
@@ -1086,6 +1087,76 @@ function copyReadingPage(){
   copyToClipboard(text);
   showToast('已复制本节，可粘给AI总结 ✨', 'success');
 }
+// ============== 框选右键 → 标记为重点知识 ==============
+function showAddNoteFromSelection(){
+  const sel = window.getSelection();
+  const text = sel ? sel.toString().trim() : '';
+  if(!text){ showToast('请先用鼠标框选一段文字', 'error'); return; }
+  if(text.length > 2000){ showToast('选中的文字太长（>2000字符），请缩短后再试', 'error'); return; }
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book){ showToast('请先打开一本书', 'error'); return; }
+  const page = book.pages[state.readingPageIdx];
+  if(!page){ showToast('当前页无效', 'error'); return; }
+  const previewHtml = escapeHtml(text).replace(/\n/g, '<br>');
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      标记为重点知识
+    </div>
+    <div class="form-row">
+      <label class="form-label">📌 选中的原文</label>
+      <div style="background:var(--highlight);border:1px solid var(--accent-light);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.6;max-height:160px;overflow-y:auto;color:var(--text)">${previewHtml}</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">✏️ 可编辑（添加注释/删减）</label>
+      <textarea class="form-input" id="noteSelectionText" rows="5">${escapeHtml(text)}</textarea>
+    </div>
+    <div class="form-row" style="display:flex;gap:10px;font-size:13px;color:var(--muted);flex-wrap:wrap">
+      <span>📖 <b style="color:var(--primary)">${escapeHtml(book.title)}</b></span>
+      <span>·</span>
+      <span>第 <b style="color:var(--accent)">${escapeHtml(String(page.page))}</b> 节</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-accent" onclick="confirmAddNoteFromSelection()">📌 保存到笔记</button>
+    </div>
+  `);
+  setTimeout(() => {
+    const ta = document.getElementById('noteSelectionText');
+    if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }, 50);
+}
+function confirmAddNoteFromSelection(){
+  const ta = document.getElementById('noteSelectionText');
+  if(!ta){ closeModal(); return; }
+  const text = (ta.value || '').trim();
+  if(!text){ showToast('笔记内容不能为空', 'error'); return; }
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  const page = book.pages[state.readingPageIdx];
+  if(!page) return;
+  const notes = getNotes();
+  notes.unshift({
+    id: genId(), bookId: book.id, page: page.page, text: text,
+    createdAt: Date.now(), lastReviewedAt: null, archived: false,
+    source: 'selection'
+  });
+  saveNotes(notes);
+  state.notes = notes;
+  closeModal();
+  showToast('已标记为重点知识 📌（' + text.length + '字）', 'success');
+  render();
+  try { window.getSelection().removeAllRanges(); } catch(_){}
+}
+document.addEventListener('contextmenu', e => {
+  const t = e.target;
+  if(!t || !t.closest || !t.closest('#readingContent')) return;
+  const sel = window.getSelection();
+  const text = sel ? sel.toString().trim() : '';
+  if(!text) return;
+  e.preventDefault();
+  showAddNoteFromSelection();
+});
 
 // ============== 交互方法 ==============
 // 内联搜索（兼容保留，不再被 input 调用）
