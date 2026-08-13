@@ -1912,10 +1912,10 @@ document.querySelectorAll('.tab, .pc-nav a').forEach(el => {
   if(!Array.isArray(_mem.notes)) _mem.notes = [];
   if(!Array.isArray(_mem.searches)) _mem.searches = [];
   console.log('[init] 数据层就绪：books=' + _mem.books.length);
-  // 首次启动尝试自动加载同目录的 JSON（CloudStudio 部署场景）
-  if(_mem.books.length === 0){
-    await tryAutoLoadBooks();
-  }
+  // 每次启动都重新从目录拉取最新书籍。
+  // 早期若税法2尚未上传/加载失败，会把「只有税法1」的列表缓存进手机 localStorage，
+  // 若只在为空时才拉取，税法2 会永远补不上；改为每次都拉，可自愈。
+  await tryAutoLoadBooks();
   if(!Array.isArray(_mem.books)) _mem.books = [];
   render();
 })();
@@ -1969,12 +1969,16 @@ async function tryAutoLoadBooks(){
     }
   }
   if(loaded.length > 0){
-    _mem.books = loaded;
-    saveBooks(loaded);
-    state.books = loaded;
-    if(loaded[0]) state.currentBookId = loaded[0].id;
-    console.log(`[自动加载] 已加载 ${loaded.length} 本书：${loaded.map(b=>b.title).join(', ')}`);
-    showToast(`📚 已自动加载 ${loaded.length} 本书`, 'success');
+    // 合并策略：以标题去重，线上 tax*.json 优先；保留本地手动添加、标题不在线上列表里的书
+    const loadedTitles = new Set(loaded.map(b => b.title));
+    const manualBooks = (getBooks() || []).filter(b => b.title && !loadedTitles.has(b.title));
+    const merged = loaded.concat(manualBooks);
+    _mem.books = merged;
+    saveBooks(merged);
+    state.books = merged;
+    if(!state.currentBookId && loaded[0]) state.currentBookId = loaded[0].id;
+    console.log(`[自动加载] 已合并 ${merged.length} 本书：${merged.map(b=>b.title).join(', ')}`);
+    showToast(`📚 已加载 ${merged.length} 本书`, 'success');
   }else{
     console.log('[自动加载] 同目录没有找到 JSON 文件');
   }
