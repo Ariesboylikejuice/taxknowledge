@@ -120,6 +120,8 @@ section.todo{background:var(--card);border-radius:14px;padding:16px 18px;margin:
 #readingContent mark{background:var(--highlight);color:var(--text);padding:2px 4px;border-radius:3px;font-weight:600;transition:background .3s}
 #readingContent mark.first-hl{background:var(--highlight2);outline:2px solid var(--accent);padding:2px 6px}
 #readingContent mark.hl-flash{animation:hlFlash 1.5s ease-out 2}
+#readingContent .note-anchor{background:rgba(212,105,26,.18);border-bottom:2px dashed var(--accent);padding:1px 2px;border-radius:3px;transition:background .3s}
+#readingContent .note-anchor.note-flash{background:rgba(212,105,26,.55);animation:hlFlash 1.5s ease-out 2}
 @keyframes hlFlash{
   0%,100%{background:var(--highlight2);box-shadow:0 0 0 0 rgba(212,105,26,.4)}
   50%{background:#ffd97a;box-shadow:0 0 0 8px rgba(212,105,26,.15)}
@@ -500,6 +502,113 @@ function highlightReadingText(text, keyword){
     }
     return `<mark>${m}</mark>`;
   });
+}
+
+// 进阶渲染：同时处理 关键词高亮 + 笔记来源锚点，输出到 #readingContent
+function renderReadingContent(text, keyword, noteAnchors){
+  const events = []; // {pos, end, type, id?, first?}
+  if(keyword && keyword.trim()){
+    const re = new RegExp(escapeReg(keyword.trim()), 'gi');
+    let m, first = true;
+    while((m = re.exec(text)) !== null){
+      events.push({pos: m.index, end: m.index + m[0].length, type: 'kw', first: first});
+      first = false;
+    }
+  }
+  (noteAnchors || []).forEach(a => {
+    if(typeof a.start !== 'number' || a.start < 0) return;
+    const end = Math.min(a.start + (a.length || 0), text.length);
+    if(end <= a.start) return;
+    events.push({pos: a.start, end: end, type: 'note', id: a.id});
+  });
+  events.sort((a, b) => a.pos - b.pos || a.end - b.end);
+
+  let html = '';
+  let openKw = false;
+  let firstKwDone = false;
+  const openNotes = new Set();
+  for(let i = 0; i <= text.length; i++){
+    // 在 i 处开始的事件（开标签）
+    const starts = events.filter(e => e.pos === i);
+    starts.forEach(e => {
+      if(e.type === 'kw'){
+        if(!openKw){
+          html += e.first ? '<mark class="first-hl">' : '<mark>';
+          openKw = true;
+          firstKwDone = true;
+        }
+      } else if(e.type === 'note'){
+        if(!openNotes.has(e.id)){
+          html += `<span class="note-anchor" id="note-${e.id}">`;
+          openNotes.add(e.id);
+        }
+      }
+    });
+    // 在 i 处结束的事件（关标签）— 先开后关，避免空标签
+    const ends = events.filter(e => e.end === i);
+    ends.forEach(e => {
+      if(e.type === 'kw' && openKw){
+        html += '</mark>';
+        openKw = false;
+      } else if(e.type === 'note' && openNotes.has(e.id)){
+        html += '</span>';
+        openNotes.delete(e.id);
+      }
+    });
+    if(i < text.length) html += escapeHtml(text[i]);
+  }
+  if(openKw) html += '</mark>';
+  openNotes.forEach(id => { html += '</span>'; });
+  return html;
+}
+
+// 从当前书+当前页里，把所有有 source='selection' 的笔记提取为锚点
+function getNoteAnchorsForPage(bookId, pageLabel){
+  if(!state.notes) return [];
+  return state.notes
+    .filter(n => !n.archived && n.bookId === bookId && String(n.page) === String(pageLabel) && typeof n.rangeStart === 'number')
+    .map(n => ({id: n.id, start: n.rangeStart, length: n.rangeLength || (n.text || '').length}));
+}
+
+// 计算 Range.startContainer 相对于 container 的字符偏移
+function computeOffsetInContainer(container, range){
+  if(!container || !range) return null;
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+  let offset = 0;
+  let node;
+  let found = false;
+  while((node = walker.nextNode())){
+    if(node === range.startContainer){
+      offset += range.startOffset;
+      found = true;
+      break;
+    }
+    offset += node.nodeValue.length;
+  }
+  if(!found) return null;
+  // 容器内 text 节点的总长度有时不等于 page.text 长度（特殊字符差异），保险一下：
+  const totalLen = (function(){
+    let sum = 0, n;
+    const w = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    while((n = w.nextNode())) sum += n.nodeValue.length;
+    return sum;
+  })();
+  return offset; // 偏移在原 page.text 内有效
+}
+
+// 滚动到指定笔记的来源位置并 flash
+function scrollToNoteAnchor(noteId){
+  const el = document.getElementById('note-' + noteId);
+  if(!el){
+    showToast('已跳到本节（笔记文字可能已被改，重新核对）', 'info');
+    return;
+  }
+  el.scrollIntoView({behavior: 'smooth', block: 'center'});
+  el.classList.add('note-flash');
+  setTimeout(() => el.classList.remove('note-flash'), 3000);
+  const book = state.books.find(b => b.id === state.currentBookId);
+  const page = book && book.pages[state.readingPageIdx];
+  showToast(`已定位到笔记所在位置 · ${book ? book.title : ''} 第 ${page ? page.page : ''} 节`, 'success');
 }
 
 // ============== 渲染 ==============
@@ -883,8 +992,8 @@ function renderNotesView(){
           <div class="note-card ${reviewed ? 'reviewed' : ''}" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onclick="jumpToNote('${n.id}')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="点击跳到本书本节">
             <div class="note-meta">
               <span class="note-book">${book ? escapeHtml(book.title) : '已删除的书'}</span>
-              ${n.source === 'selection' ? '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px">✂️ 框选</span>' : ''}
               <span class="note-page" style="background:var(--accent);color:#fff">第 ${n.page} 节 → 阅读</span>
+              ${n.source === 'selection' ? '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px" title="从正文里框选出来的重点">✂️ 框选</span>' : ''}
               <span>${fmtDate(n.createdAt)}</span>
             </div>
             <div class="note-text">${escapeHtml(preview)}</div>
@@ -953,7 +1062,7 @@ function renderReadView(){
         <span style="color:var(--accent);font-weight:600">${escapeHtml(curPage.page)}</span>
       </div>
 
-      <div id="readingContent" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;min-height:280px;max-height:520px;overflow-y:auto;font-size:16px;line-height:1.9;color:var(--text);white-space:pre-wrap">${highlightReadingText(curPage.text, state.pendingHighlightKeyword)}</div>
+      <div id="readingContent" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;min-height:280px;max-height:520px;overflow-y:auto;font-size:16px;line-height:1.9;color:var(--text);white-space:pre-wrap">${renderReadingContent(curPage.text, state.pendingHighlightKeyword, getNoteAnchorsForPage(book.id, curPage.page))}</div>
 
       <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-ghost" onclick="readingJumpTo(0)" style="flex:0 0 auto;min-width:60px">
@@ -1087,17 +1196,26 @@ function copyReadingPage(){
   copyToClipboard(text);
   showToast('已复制本节，可粘给AI总结 ✨', 'success');
 }
+
 // ============== 框选右键 → 标记为重点知识 ==============
 function showAddNoteFromSelection(){
   const sel = window.getSelection();
   const text = sel ? sel.toString().trim() : '';
-  if(!text){ showToast('请先用鼠标框选一段文字', 'error'); return; }
-  if(text.length > 2000){ showToast('选中的文字太长（>2000字符），请缩短后再试', 'error'); return; }
+  if(!text){
+    showToast('请先用鼠标框选一段文字', 'error');
+    return;
+  }
+  if(text.length > 2000){
+    showToast('选中的文字太长（>2000字符），请缩短后再试', 'error');
+    return;
+  }
   const book = state.books.find(b => b.id === state.currentBookId);
   if(!book){ showToast('请先打开一本书', 'error'); return; }
   const page = book.pages[state.readingPageIdx];
   if(!page){ showToast('当前页无效', 'error'); return; }
+
   const previewHtml = escapeHtml(text).replace(/\n/g, '<br>');
+
   showModal(`
     <div class="modal-title">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1121,25 +1239,53 @@ function showAddNoteFromSelection(){
       <button class="btn btn-accent" onclick="confirmAddNoteFromSelection()">📌 保存到笔记</button>
     </div>
   `);
+  // 自动聚焦到编辑框末尾，方便用户接着写
   setTimeout(() => {
     const ta = document.getElementById('noteSelectionText');
     if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }, 50);
 }
+
 function confirmAddNoteFromSelection(){
   const ta = document.getElementById('noteSelectionText');
   if(!ta){ closeModal(); return; }
   const text = (ta.value || '').trim();
-  if(!text){ showToast('笔记内容不能为空', 'error'); return; }
+  if(!text){
+    showToast('笔记内容不能为空', 'error');
+    return;
+  }
   const book = state.books.find(b => b.id === state.currentBookId);
   if(!book) return;
   const page = book.pages[state.readingPageIdx];
   if(!page) return;
+
+  // 计算选区在原 page.text 里的字符偏移（用来后面"去阅读"精确定位）
+  let rangeStart = null, rangeLength = text.length;
+  const sel = window.getSelection();
+  const container = document.getElementById('readingContent');
+  if(sel && sel.rangeCount > 0 && container){
+    const range = sel.getRangeAt(0);
+    const offsetInContainer = computeOffsetInContainer(container, range);
+    if(typeof offsetInContainer === 'number'){
+      rangeStart = offsetInContainer;
+      // 选中的原文长度优先用 range 的 toString（更准，因为用户可能改过 textarea）
+      const rawSelected = sel.toString();
+      if(rawSelected) rangeLength = rawSelected.length;
+    }
+  }
+
   const notes = getNotes();
   notes.unshift({
-    id: genId(), bookId: book.id, page: page.page, text: text,
-    createdAt: Date.now(), lastReviewedAt: null, archived: false,
-    source: 'selection'
+    id: genId(),
+    bookId: book.id,
+    page: page.page,
+    text: text,
+    createdAt: Date.now(),
+    lastReviewedAt: null,
+    archived: false,
+    source: 'selection',
+    rangeStart: rangeStart,
+    rangeLength: rangeLength
   });
   saveNotes(notes);
   state.notes = notes;
@@ -1148,12 +1294,14 @@ function confirmAddNoteFromSelection(){
   render();
   try { window.getSelection().removeAllRanges(); } catch(_){}
 }
+
+// 阅读视图内：仅在有选区文字时拦截默认右键菜单
 document.addEventListener('contextmenu', e => {
-  const t = e.target;
-  if(!t || !t.closest || !t.closest('#readingContent')) return;
+  const target = e.target;
+  if(!target || !target.closest || !target.closest('#readingContent')) return;
   const sel = window.getSelection();
   const text = sel ? sel.toString().trim() : '';
-  if(!text) return;
+  if(!text) return; // 没选文字 → 让浏览器默认菜单正常显示
   e.preventDefault();
   showAddNoteFromSelection();
 });
@@ -1340,7 +1488,19 @@ function jumpToNote(noteId){
   }
   state.currentView = 'read';
   render();
-  showToast(`已跳到《${book ? book.title : ''}》第 ${n.page} 节`, 'success');
+  // 优先精确定位到选区起点（旧笔记或手工笔记无 rangeStart 时退回关键字搜索）
+  if(typeof n.rangeStart === 'number'){
+    setTimeout(() => scrollToNoteAnchor(noteId), 80);
+  } else {
+    const kw = (n.text || '').slice(0, 40).trim();
+    if(kw){
+      state.pendingHighlightKeyword = kw;
+      render();
+      setTimeout(() => scrollToKeyword(kw), 80);
+    } else {
+      showToast(`已跳到《${book ? book.title : ''}》第 ${n.page} 节`, 'success');
+    }
+  }
 }
 
 function goView(view){
