@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#2c3e50">
+<title>税法知识点查询工具</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#2c3e50;--primary-light:#4a6076;--accent:#d4691a;--accent-light:#f0a060;
+  --bg:#f5f1e8;--card:#ffffff;--text:#2c2c2c;--muted:#8a8a8a;--muted-2:#b5b0a4;
+  --danger:#d44545;--danger-light:#fce8e8;--success:#4a8b5c;--warning:#e8a93d;
+  --border:#e8e3d8;--highlight:#fff4d6;--highlight2:#ffe9a8;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;padding-bottom:env(safe-area-inset-bottom);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
+.container{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* Header */
+header.app-header{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:18px 0;box-shadow:0 2px 12px rgba(0,0,0,.08);position:sticky;top:0;z-index:100}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600}
+.brand svg{width:28px;height:28px;flex-shrink:0}
+.brand-sub{font-size:12px;font-weight:400;opacity:.85;margin-top:2px}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-mini{background:rgba(255,255,255,.15);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;min-height:36px;transition:background .2s}
+.btn-mini:hover{background:rgba(255,255,255,.25)}
+.btn-mini svg{width:14px;height:14px}
+
+/* Backup hint */
+.backup-hint{background:#fff8e1;border:1px solid #ffe082;color:#8a6800;padding:10px 14px;margin:12px 0;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px}
+
+/* Today section */
+section.todo{background:var(--card);border-radius:14px;padding:16px 18px;margin:16px 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.section-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--primary);margin-bottom:12px}
+.section-title svg{width:18px;height:18px;color:var(--accent)}
+.todo-empty{color:var(--muted);font-size:14px;text-align:center;padding:16px 0}
+.todo-list{list-style:none}
+.todo-list li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border)}
+.todo-list li:last-child{border-bottom:none}
+.todo-badge{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:var(--danger-light);color:var(--danger);display:flex;align-items:center;justify-content:center}
+.todo-badge.warn{background:#fff3e0;color:var(--warning)}
+.todo-badge.info{background:#e3f2fd;color:#1976d2}
+.todo-badge svg{width:16px;height:16px}
+.todo-body{flex:1;min-width:0}
+.todo-title{font-weight:500;font-size:14px;color:var(--text)}
+.todo-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.todo-action{flex-shrink:0;display:flex;gap:6px}
+.btn-tiny{padding:6px 10px;border-radius:6px;font-size:12px;background:var(--primary);color:#fff;min-height:28px}
+.btn-tiny.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}
+.btn-tiny.danger{background:var(--danger);color:#fff}
+
+/* Tabs (mobile) / sidebar (pc) */
+.tabs{display:flex;background:var(--card);border-radius:14px;padding:6px;margin:16px 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.tab{flex:1;padding:10px 8px;text-align:center;border-radius:10px;font-size:14px;font-weight:500;color:var(--muted);transition:all .2s;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab.active{background:var(--primary);color:#fff}
+.tab svg{width:16px;height:16px}
+
+@media(min-width:768px){
+  .tabs{display:none}
+  .layout{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:8px}
+  .sidebar{position:sticky;top:84px;align-self:start}
+  .sidebar-card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:16px}
+  .pc-nav{display:flex;flex-direction:column;gap:4px}
+  .pc-nav a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;color:var(--text);text-decoration:none;font-size:15px;min-height:44px;font-weight:500}
+  .pc-nav a.active{background:var(--primary);color:#fff}
+  .pc-nav a svg{width:18px;height:18px}
+}
+
+/* Cards */
+.card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:16px}
+
+/* Buttons */
+.btn{padding:12px 18px;border-radius:10px;font-size:15px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{background:var(--accent-light)}
+.btn-ghost{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn svg{width:16px;height:16px}
+.btn-full{width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{flex:1;min-width:140px}
+
+/* Book list */
+.book-list{display:grid;gap:12px}
+.book-card{display:flex;gap:14px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);transition:all .2s;cursor:pointer}
+.book-card:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.book-cover{flex-shrink:0;width:60px;height:84px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px;box-shadow:0 2px 8px rgba(44,62,80,.3)}
+.book-info{flex:1;min-width:0}
+.book-title{font-weight:600;font-size:16px;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.book-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.book-meta span{display:inline-flex;align-items:center;gap:3px}
+.book-meta svg{width:12px;height:12px}
+.book-actions{display:flex;gap:6px;margin-top:8px}
+.book-actions button{font-size:12px;padding:6px 12px;border-radius:6px;background:var(--bg);color:var(--text);min-height:32px;border:1px solid var(--border)}
+.book-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.book-actions button.danger{color:var(--danger)}
+
+/* Search */
+.search-box{position:relative;margin-bottom:16px}
+.search-input{width:100%;padding:16px 50px 16px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;background:var(--card);transition:border-color .2s;min-height:56px}
+.search-input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search-icon svg{width:20px;height:20px}
+.search-meta{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.search-meta strong{color:var(--accent)}
+.search-result{background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+.search-result-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:12px}
+.search-page{font-weight:600;color:var(--primary);font-size:15px;display:flex;align-items:center;gap:6px}
+.search-page svg{width:14px;height:14px}
+.search-count{background:var(--accent);color:#fff;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:500}
+.context-snippet{padding:10px 12px;background:#fdf8ee;border-radius:8px;margin:6px 0;font-size:14px;line-height:1.7;border-left:3px solid var(--accent-light);transition:background .15s,transform .15s}
+.context-snippet:hover{background:#fff4e0;transform:translateX(2px)}
+.context-snippet mark{background:var(--highlight);color:var(--text);padding:1px 3px;border-radius:3px;font-weight:600}
+/* 阅读视图：关键词高亮 + 首处动画 */
+#readingContent mark{background:var(--highlight);color:var(--text);padding:2px 4px;border-radius:3px;font-weight:600;transition:background .3s}
+#readingContent mark.first-hl{background:var(--highlight2);outline:2px solid var(--accent);padding:2px 6px}
+#readingContent mark.hl-flash{animation:hlFlash 1.5s ease-out 2}
+@keyframes hlFlash{
+  0%,100%{background:var(--highlight2);box-shadow:0 0 0 0 rgba(212,105,26,.4)}
+  50%{background:#ffd97a;box-shadow:0 0 0 8px rgba(212,105,26,.15)}
+}
+.full-page{background:#fdf8ee;border-radius:8px;padding:14px;font-size:14px;line-height:1.8;margin-top:10px;border:1px dashed var(--border);max-height:400px;overflow-y:auto}
+.full-page mark{background:var(--highlight);color:var(--text);padding:2px 4px;border-radius:3px;font-weight:600}
+.full-page mark.active{background:var(--highlight2);outline:2px solid var(--accent)}
+.full-page-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.full-page-actions button{padding:8px 14px;border-radius:8px;font-size:13px;background:var(--primary);color:#fff;min-height:36px;display:inline-flex;align-items:center;gap:6px}
+.full-page-actions button svg{width:14px;height:14px}
+.full-page-actions button.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}
+
+/* Note */
+.note-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--accent)}
+.note-card.reviewed{opacity:.7;border-left-color:var(--success)}
+.note-meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap;gap:6px}
+.note-book{font-weight:600;color:var(--primary);font-size:13px}
+.note-page{background:var(--bg);padding:2px 8px;border-radius:4px;font-weight:600;color:var(--accent)}
+.note-text{font-size:14px;color:var(--text);line-height:1.6;margin:6px 0;white-space:pre-wrap;word-break:break-word}
+.note-actions{display:flex;gap:6px;margin-top:8px}
+.note-actions button{padding:6px 12px;border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);min-height:32px;border:1px solid var(--border)}
+.note-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.note-actions button.danger{color:var(--danger)}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px;overflow-y:auto}
+.modal-backdrop.show{display:flex}
+.modal{background:var(--card);border-radius:14px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:18px;font-weight:600;color:var(--primary);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal-title svg{width:20px;height:20px;color:var(--accent)}
+.form-row{margin-bottom:14px}
+.form-label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:6px}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:15px;background:#fff}
+.form-input:focus{outline:none;border-color:var(--accent)}
+textarea.form-input{min-height:120px;resize:vertical;line-height:1.6}
+.form-hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+.form-hint code{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:11px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.modal-actions .btn{flex:1}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty svg{width:64px;height:64px;color:var(--muted-2);margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:500;color:var(--text);margin-bottom:6px}
+.empty-desc{font-size:14px;color:var(--muted);margin-bottom:20px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:9999;opacity:0;pointer-events:none;transition:all .3s;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-8px)}
+.toast.error{background:var(--danger)}
+.toast.success{background:var(--success)}
+
+/* Tips */
+.tips{background:#f0f7f4;border:1px solid #c8e6c9;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.7;color:#2e5d3e}
+.tips strong{color:var(--success)}
+.tips ol{padding-left:20px;margin-top:6px}
+.tips li{margin-bottom:4px}
+
+/* Book select */
+.book-select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:15px;background:#fff;margin-bottom:14px}
+
+/* Note in page */
+.context-note{background:var(--highlight);padding:10px 12px;border-radius:8px;margin-top:10px;font-size:13px;line-height:1.7;border-left:3px solid var(--accent)}
+.context-note-label{font-weight:600;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.context-note-label svg{width:14px;height:14px}
+
+/* Mobile bottom space */
+@media(max-width:767px){
+  .header-row{flex-direction:column;align-items:stretch}
+  .header-actions{justify-content:center}
+  .book-card{flex-direction:column;align-items:flex-start}
+  .book-cover{width:100%;height:80px}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="container">
+    <div class="header-row">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <div>
+          <div>税法知识点查询工具</div>
+          <div class="brand-sub">税务师备考 · 关键词直达考点页码</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-mini" onclick="exportData()" title="导出备份">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出
+        </button>
+        <button class="btn-mini" onclick="showImportModal()" title="导入恢复">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入
+        </button>
+        <button class="btn-mini" onclick="showAddBookModal()" title="添加新书" style="background:rgba(212,105,26,.9)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          加书
+        </button>
+        <button class="btn-mini" onclick="showAbout()" title="关于" style="background:rgba(255,255,255,.25)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          关于
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container" style="padding-top:8px">
+
+  <div id="backupHint" class="backup-hint" style="display:none">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span>数据已积累 <strong id="dataCount">0</strong> 条，建议导出备份以防丢失</span>
+    <button class="btn-tiny" onclick="exportData()" style="margin-left:auto">立即导出</button>
+  </div>
+
+  <!-- 今天要处理 -->
+  <section class="todo">
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      今天要处理
+    </div>
+    <ul class="todo-list" id="todoList"></ul>
+  </section>
+
+  <!-- 移动端 Tab -->
+  <div class="tabs">
+    <button class="tab active" data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      检索
+    </button>
+    <button class="tab" data-view="read">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      阅读
+    </button>
+    <button class="tab" data-view="books">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      书库
+    </button>
+    <button class="tab" data-view="notes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      笔记
+    </button>
+  </div>
+
+  <div class="layout">
+    <!-- PC 侧栏 -->
+    <aside class="sidebar" style="display:none" id="pcSidebar">
+      <div class="sidebar-card">
+        <div class="pc-nav" id="pcNav">
+          <a href="#search" class="active" data-view="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            知识检索
+          </a>
+          <a href="#books" data-view="books">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            我的书库
+          </a>
+          <a href="#read" data-view="read">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            在线阅读
+          </a>
+          <a href="#notes" data-view="notes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            重点笔记
+          </a>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <div class="section-title" style="margin-bottom:10px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          统计
+        </div>
+        <div id="statsBox" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
+      </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main id="mainView"></main>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============== 数据层（纯 localStorage，零依赖） ==============
+// 单域名 localStorage 上限约 5MB，本工具纯文本几千条足够
+const LS_BOOKS = 'wb_tax_books';
+const LS_NOTES = 'wb_tax_notes';
+const LS_SEARCHES = 'wb_tax_searches';
+const LS_VIEW = 'wb_tax_view';
+const LS_SAMPLE_FLAG = 'wb_klib_sample_seeded_v2';
+
+// 内存缓存
+const _mem = { books: [], notes: [], searches: [] };
+
+function loadAll(){
+  try{
+    _mem.books = JSON.parse(localStorage.getItem(LS_BOOKS) || '[]');
+    _mem.notes = JSON.parse(localStorage.getItem(LS_NOTES) || '[]');
+    _mem.searches = JSON.parse(localStorage.getItem(LS_SEARCHES) || '[]');
+  }catch(e){
+    _mem.books = []; _mem.notes = []; _mem.searches = [];
+  }
+  if(!Array.isArray(_mem.books)) _mem.books = [];
+  if(!Array.isArray(_mem.notes)) _mem.notes = [];
+  if(!Array.isArray(_mem.searches)) _mem.searches = [];
+}
+
+function persistBooks(){
+  try{ localStorage.setItem(LS_BOOKS, JSON.stringify(_mem.books)); }
+  catch(e){ console.warn('books 写失败', e); }
+}
+function persistNotes(){
+  try{ localStorage.setItem(LS_NOTES, JSON.stringify(_mem.notes)); }
+  catch(e){ console.warn('notes 写失败', e); }
+}
+function persistSearches(){
+  try{ localStorage.setItem(LS_SEARCHES, JSON.stringify(_mem.searches)); }
+  catch(e){ console.warn('searches 写失败', e); }
+}
+
+function getBooks(){ return Array.isArray(_mem.books) ? _mem.books : []; }
+function getNotes(){ return Array.isArray(_mem.notes) ? _mem.notes : []; }
+function getSearches(){ return Array.isArray(_mem.searches) ? _mem.searches : []; }
+
+function saveBooks(v){
+  _mem.books = Array.isArray(v) ? v : [];
+  persistBooks();
+}
+function saveNotes(v){
+  _mem.notes = Array.isArray(v) ? v : [];
+  persistNotes();
+}
+function saveSearches(v){
+  _mem.searches = Array.isArray(v) ? v : [];
+  persistSearches();
+}
+
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function fmtDate(ts){
+  const d = new Date(ts);
+  const day = d.getDate().toString().padStart(2,'0');
+  return `${d.getMonth()+1}月${day}日`;
+}
+function daysAgo(ts){
+  return Math.floor((Date.now() - ts) / 86400000);
+}
+function prettyBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/1024/1024).toFixed(2) + ' MB';
+}
+
+// ============== 状态 ==============
+let state = {
+  books: getBooks(),
+  notes: getNotes(),
+  searches: getSearches(),
+  currentView: 'search',
+  currentBookId: '',
+  searchKeyword: '',
+  searchResults: [],
+  expandedPage: null,
+  // 阅读视图
+  readingPageIdx: 0,  // 当前阅读的页索引（相对当前书的 pages 数组）
+  pendingHighlightKeyword: ''  // 跳转到阅读页时高亮的关键词（首次出现位置特殊标记）
+};
+
+// ============== 预置示例数据 ==============
+function seedSample(){
+  if(localStorage.getItem(LS_SAMPLE_FLAG)) return;
+  const sample = {
+    id: 'sample-shuifa2',
+    title: '税法（II）· 2024版',
+    subject: '税务师考试',
+    cover: '税',
+    pages: [
+      {page:1, text:`第一章 货物和劳务税\n\n第一节 增值税一般规定\n\n一、增值税的概念\n增值税是以商品（含应税劳务）在流转过程中产生的增值额作为计税依据而征收的一种流转税。它由销售方缴纳，但由购买方承担，实际上是一种消费税。\n\n二、增值税的特点\n1. 实行价外税\n2. 多环节征收\n3. 实行税款抵扣制度\n4. 按照生产经营规模划分纳税人类别\n\n三、纳税人\n在中华人民共和国境内销售货物或者加工、修理修配劳务，销售服务、无形资产、不动产，以及进口货物的单位和个人，为增值税的纳税人。`},
+      {page:42, text:`第七章 所得税\n\n第二节 个人所得税\n\n【知识点 · 限售股转让】\n限售股包括：\n1. 上市公司股权分置改革完成后股票；\n2. 上市公司新老股东持股；\n3. 首次公开发行股票并上市而形成的限售股；\n4. 上市公司非公开发行股票形成的限售股。\n\n【应纳税额计算】\n应纳税所得额 = 限售股转让收入 − 财产原值 − 合理税费\n应纳税额 = 应纳税所得额 × 20%\n\n适用财产转让所得项目，税率为20%比例税率。`},
+      {page:43, text:`【扣缴义务】\n限售股转让所得个人所得税，以证券机构所在地为主管税务机关。\n证券机构即证券公司，是法定的扣缴义务人，应在转让时代收代缴个人所得税。\n\n纳税人：个人转让限售股所得继续暂免征收个人所得税，不适用财税[2010]70号文件。\n注：财税[2010]70号《关于明确个人所得税若干政策执行问题的通知》明确了限售股转让所得的个税处理。\n\n【征管要点】\n1. 个人转让限售股所得，按照"财产转让所得"项目，适用20%税率征收个人所得税。\n2. 限售股在解禁前被转让的，按以下公式计算：(转让收入−原值−税费) × 20%。\n3. 限售股转让所得个人所得税款，由证券机构所在地主管税务机关负责征收管理。`},
+      {page:44, text:`【政策依据】\n1. 《中华人民共和国个人所得税法》及其实施条例；\n2. 财税[2010]70号《关于明确个人所得税若干政策执行问题的通知》；\n3. 财税[2010]41号《关于个人金融商品买卖等营业税改征增值税试点有关税收政策的补充通知》；\n4. 总局公告2014年第67号《股权转让所得个人所得税管理办法（试行）》相关条款参照适用。\n\n【例题】\n某个人持有某上市公司IPO限售股，原值10万元，转让收入30万元，支付合理税费1.2万元。\n应纳税所得额 = 30 − 10 − 1.2 = 18.8（万元）\n应纳税额 = 18.8 × 20% = 3.76（万元）\n由证券机构代扣代缴。`},
+      {page:85, text:`【2024年新政策预警 · 待整理】\n2024年度，财政部、税务总局对限售股转让个人所得税收政策发布了补充通知，部分计算口径有所调整。\n请关注最新的官方公告，及时更新本节内容。\n（这是一条示例的"逾期/待整理"项，引导你养成及时整理笔记的习惯）`}
+    ],
+    addedAt: Date.now() - 8 * 86400000
+  };
+  const books = getBooks();
+  books.push(sample);
+  saveBooks(books);
+
+  const notes = [
+    {id:genId(), bookId:'sample-shuifa2', page:42, text:'限售股转让适用财产转让所得20%税率，由证券机构代扣代缴', createdAt: Date.now() - 5*86400000, lastReviewedAt: Date.now() - 8*86400000},
+    {id:genId(), bookId:'sample-shuifa2', page:43, text:'记住征管机关：以证券机构所在地主管税务机关为准', createdAt: Date.now() - 5*86400000, lastReviewedAt: Date.now() - 8*86400000}
+  ];
+  saveNotes(notes);
+
+  const searches = [
+    {keyword:'限售股转让', lastUsedAt: Date.now() - 86400000},
+    {keyword:'个人所得税税率', lastUsedAt: Date.now() - 2*86400000}
+  ];
+  saveSearches(searches);
+
+  localStorage.setItem(LS_SAMPLE_FLAG, '1');
+}
+
+// ============== 搜索算法 ==============
+function searchInBook(book, keyword){
+  if(!keyword || !book.pages) return [];
+  const k = keyword.trim();
+  if(!k) return [];
+  const results = [];
+  for(const p of book.pages){
+    const text = p.text || '';
+    const lower = text.toLowerCase();
+    const kl = k.toLowerCase();
+    let pos = 0;
+    let count = 0;
+    const positions = [];
+    while(true){
+      const idx = lower.indexOf(kl, pos);
+      if(idx === -1) break;
+      count++;
+      positions.push(idx);
+      pos = idx + kl.length;
+    }
+    if(count === 0) continue;
+    // 提取上下文（包含关键词的句子）
+    const contexts = extractContexts(text, k, positions);
+    results.push({page: p.page, count, contexts, fullText: text, positions});
+  }
+  // 排序：命中次数多的排前面，同次数按页码（page 可能是字符串如 "1-1"，用 localeCompare 兜底）
+  results.sort((a,b) => b.count - a.count || String(a.page).localeCompare(String(b.page), undefined, {numeric:true}));
+  return results;
+}
+
+function extractContexts(text, keyword, positions){
+  // 按中文标点和换行切分
+  const segments = [];
+  const re = /[^。！？!?\n]+[。！？!?\n]?/g;
+  let m;
+  while((m = re.exec(text)) !== null){
+    segments.push({start: m.index, end: m.index + m[0].length, text: m[0]});
+  }
+  // 找到包含关键词的段落
+  const hits = segments.filter(s => s.text.toLowerCase().includes(keyword.toLowerCase()));
+  return hits.map(s => s.text).slice(0, 6);
+}
+
+function highlightText(text, keyword){
+  if(!keyword) return escapeHtml(text);
+  const escaped = escapeHtml(text);
+  const re = new RegExp(escapeReg(keyword), 'gi');
+  return escaped.replace(re, m => `<mark>${m}</mark>`);
+}
+
+function escapeReg(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// 阅读视图专用：把关键词首次出现位置用 first-hl class 标记，方便 scrollIntoView 定位
+function highlightReadingText(text, keyword){
+  const escaped = escapeHtml(text);
+  if(!keyword) return escaped;
+  const kw = keyword.trim();
+  if(!kw) return escaped;
+  const re = new RegExp(escapeReg(kw), 'gi');
+  let firstDone = false;
+  return escaped.replace(re, m => {
+    if(!firstDone){
+      firstDone = true;
+      return `<mark class="first-hl">${m}</mark>`;
+    }
+    return `<mark>${m}</mark>`;
+  });
+}
+
+// ============== 渲染 ==============
+function render(){
+  state.books = getBooks();
+  state.notes = getNotes();
+  state.searches = getSearches();
+
+  // 默认选中第一本书
+  if(!state.currentBookId && state.books.length){
+    state.currentBookId = state.books[0].id;
+  }
+
+  renderTodo();
+  renderMain();
+  renderStats();
+  renderTabs();
+  updateBackupHint();
+}
+
+function renderTodo(){
+  const list = document.getElementById('todoList');
+  const items = [];
+
+  // 待整理：新加的书（3天内还没笔记）
+  for(const b of state.books){
+    const hasNote = state.notes.some(n => n.bookId === b.id);
+    if(!hasNote && daysAgo(b.addedAt) <= 30){
+      items.push({
+        badge: 'info',
+        icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+        title: '新书待整理：' + b.title,
+        desc: '尚未标记任何重点笔记',
+        action: {label:'去搜索', onClick: `goSearch('${b.id}')`}
+      });
+    }
+  }
+
+  // 待复习：超过7天没复习的笔记
+  const needReview = state.notes.filter(n => {
+    const reviewTs = n.lastReviewedAt || n.createdAt;
+    return !n.archived && daysAgo(reviewTs) >= 7;
+  });
+  for(const n of needReview.slice(0,3)){
+    const book = state.books.find(b => b.id === n.bookId);
+    if(!book) continue;
+    items.push({
+      badge: 'warn',
+      icon: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8|M3 3v5h5',
+      title: `复习笔记 · 《${book.title}》 第${n.page}页`,
+      desc: `${n.lastReviewedAt ? '上次复习：' + fmtDate(n.lastReviewedAt) : '尚未复习'} · 内容：${n.text.slice(0,30)}...`,
+      action: {label:'标记复习', onClick: `markReviewed('${n.id}')`}
+    });
+  }
+
+  // 最近搜索
+  for(const s of state.searches.slice(0,2)){
+    if(!s.keyword) continue;
+    items.push({
+      badge: '',
+      icon: 'M21 21l-4.35-4.35|M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+      title: `最近搜过：${s.keyword}`,
+      desc: `${fmtDate(s.lastUsedAt)} · 搜到了相关内容`,
+      action: {label:'再搜一次', onClick: `goSearchKeyword('${s.keyword.replace(/'/g, "\\'")}')`}
+    });
+  }
+
+  if(items.length === 0){
+    list.innerHTML = '<div class="todo-empty">太棒了！今天没什么要处理的，开始你的知识检索吧 👇</div>';
+    return;
+  }
+
+  list.innerHTML = items.slice(0,6).map(item => `
+    <li>
+      <div class="todo-badge ${item.badge}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${item.icon}"/></svg>
+      </div>
+      <div class="todo-body">
+        <div class="todo-title">${escapeHtml(item.title)}</div>
+        <div class="todo-desc">${escapeHtml(item.desc)}</div>
+      </div>
+      <div class="todo-action">
+        ${item.action ? `<button class="btn-tiny" onclick="${item.action.onClick}">${item.action.label}</button>` : ''}
+      </div>
+    </li>
+  `).join('');
+}
+
+function renderTabs(){
+  // 移动端 tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === state.currentView);
+  });
+  // 桌面端 sidebar
+  const pcSidebar = document.getElementById('pcSidebar');
+  if(window.innerWidth >= 768){
+    pcSidebar.style.display = '';
+  } else {
+    pcSidebar.style.display = 'none';
+  }
+  document.querySelectorAll('.pc-nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.view === state.currentView);
+  });
+}
+
+function renderStats(){
+  const statsBox = document.getElementById('statsBox');
+  if(statsBox){
+    statsBox.innerHTML = `
+      <div>📚 藏书：<strong style="color:var(--primary)">${state.books.length}</strong> 本</div>
+      <div>📄 页面总数：<strong style="color:var(--primary)">${state.books.reduce((s,b)=>s+(b.pages?b.pages.length:0),0)}</strong> 页</div>
+      <div>🔖 笔记：<strong style="color:var(--primary)">${state.notes.filter(n=>!n.archived).length}</strong> 条</div>
+      <div>🔍 搜索过：<strong style="color:var(--primary)">${state.searches.length}</strong> 个关键词</div>
+    `;
+  }
+}
+
+function updateBackupHint(){
+  const total = state.books.length + state.notes.length;
+  const hint = document.getElementById('backupHint');
+  const countEl = document.getElementById('dataCount');
+  if(total >= 30){
+    countEl.textContent = total;
+    hint.style.display = '';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+function renderMain(){
+  const main = document.getElementById('mainView');
+  if(state.currentView === 'search') main.innerHTML = renderSearchView();
+  else if(state.currentView === 'read') main.innerHTML = renderReadView();
+  else if(state.currentView === 'books') main.innerHTML = renderBooksView();
+  else if(state.currentView === 'notes') main.innerHTML = renderNotesView();
+  bindMainEvents();
+}
+
+// ============== 检索页 ==============
+function renderSearchView(){
+  if(state.books.length === 0){
+    return `
+      <div class="card">
+        <div class="empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <div class="empty-title">还没有书，先导入一本吧</div>
+          <div class="empty-desc">支持两种方式：手动粘贴页面文本，或导入预生成的JSON</div>
+          <button class="btn btn-accent" onclick="showAddBookModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加第一本书
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  const book = state.books.find(b => b.id === state.currentBookId) || state.books[0];
+
+  return `
+    <div class="card">
+      <select class="book-select" id="bookSelect">
+        ${state.books.map(b => `<option value="${b.id}" ${b.id === book.id ? 'selected' : ''}>${escapeHtml(b.title)}${b.subject ? ' · ' + escapeHtml(b.subject) : ''}</option>`).join('')}
+      </select>
+
+      <div class="search-box">
+        <input class="search-input" id="searchInput" type="search" placeholder="输入关键词，如：限售股、个税税率..." value="${escapeHtml(state.searchKeyword)}" autocomplete="off">
+        <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      </div>
+
+      ${state.searchKeyword ? `
+        <div class="search-meta">
+          <span>📌 《${escapeHtml(book.title)}》 共命中 <strong>${state.searchResults.reduce((s,r)=>s+r.count,0)}</strong> 处，分布于 <strong>${state.searchResults.length}</strong> 页</span>
+          <span style="color:var(--muted-2);font-size:12px">页面按命中数排序</span>
+        </div>
+      ` : `
+        <div class="tips">
+          <strong>💡 试试这些：</strong>
+          <ol>
+            <li>直接搜索关键词，如「<b>限售股转让</b>」「<b>个人所得税税率</b>」</li>
+            <li>支持多关键词（用空格分隔），全部命中才会显示</li>
+            <li>搜索结果按命中次数排序，点击展开看完整页面</li>
+            <li>找到重点可以一键标记为笔记，下次复习不丢</li>
+          </ol>
+        </div>
+      `}
+
+      <div id="searchResults">
+        ${state.searchResults.length === 0 && state.searchKeyword ? `
+          <div class="empty" style="padding:30px 0">
+            <div class="empty-title">未找到匹配内容</div>
+            <div class="empty-desc">试试换个关键词，或切换到其他书籍</div>
+          </div>
+        ` : state.searchResults.map(r => renderSearchResultCard(book, r)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSearchResultCard(book, r){
+  const isExpanded = state.expandedPage === r.page;
+  const noteAlready = state.notes.find(n => n.bookId === book.id && n.page === r.page);
+  return `
+    <div class="search-result">
+      <div class="search-result-head" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword)" title="点击跳到阅读视图并定位关键词">
+        <div class="search-page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          《${escapeHtml(book.title)}》 第 ${r.page} 节
+          <span style="margin-left:6px;color:var(--accent);font-size:12px">→ 定位到关键词</span>
+        </div>
+        <div class="search-count">命中 ${r.count} 处</div>
+      </div>
+      ${r.contexts.map((ctx, i) => `
+        <div class="context-snippet" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword)" title="点击跳到阅读视图并定位关键词">
+          <span style="color:var(--muted-2);font-size:11px;margin-right:6px">[${i+1}/${r.count}]</span>${highlightText(ctx, state.searchKeyword)}
+        </div>
+      `).join('')}
+
+      ${isExpanded ? `
+        <div class="full-page">${highlightText(r.fullText, state.searchKeyword)}</div>
+        <div class="full-page-actions">
+          <button onclick="markNotePrompt('${book.id}', '${r.page}')" ${noteAlready ? 'disabled' : ''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            ${noteAlready ? '已标记' : '标记为笔记'}
+          </button>
+          <button class="ghost" onclick="copyPageText('${book.id}', '${r.page}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制本段贴给AI总结
+          </button>
+          <button class="ghost" onclick="toggleExpand('${r.page}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+            收起
+          </button>
+        </div>
+      ` : `
+        <button class="btn-tiny ghost" style="margin-top:8px" onclick="toggleExpand('${r.page}')">查看完整页面</button>
+      `}
+    </div>
+  `;
+}
+
+function bindMainEvents(){
+  // 检索：只走 addEventListener，正确处理中文输入法
+  const si = document.getElementById('searchInput');
+  if(si){
+    let timer = null;
+    let isComposing = false;
+    // 中文输入法开始：标记"正在打字"，暂停搜索
+    si.addEventListener('compositionstart', () => {
+      isComposing = true;
+      clearTimeout(timer);
+    });
+    // 中文输入法结束：立即搜一次（不等 debounce）
+    si.addEventListener('compositionend', e => {
+      isComposing = false;
+      clearTimeout(timer);
+      doSearch(e.target.value);
+    });
+    // 普通输入：debounce 350ms
+    si.addEventListener('input', e => {
+      if(isComposing) return; // 中文输入法期间不触发
+      clearTimeout(timer);
+      const v = e.target.value;
+      timer = setTimeout(() => doSearch(v), 350);
+    });
+    // 回车立即搜
+    si.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){
+        clearTimeout(timer);
+        doSearch(e.target.value);
+      }
+    });
+  }
+  const bs = document.getElementById('bookSelect');
+  if(bs){
+    bs.addEventListener('change', e => {
+      state.currentBookId = e.target.value;
+      doSearch(state.searchKeyword);
+    });
+  }
+  // 阅读视图的选书
+  const rbs = document.getElementById('readBookSelect');
+  if(rbs){
+    rbs.addEventListener('change', e => {
+      state.currentBookId = e.target.value;
+      state.readingPageIdx = 0;
+      render();
+    });
+  }
+}
+
+// ============== 书库页 ==============
+function renderBooksView(){
+  if(state.books.length === 0){
+    return `
+      <div class="card">
+        <div class="empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <div class="empty-title">书库空空如也</div>
+          <div class="empty-desc">先把书的页面文本导入进来，就可以开始检索了</div>
+          <button class="btn btn-accent" onclick="showAddBookModal()">添加第一本书</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div class="section-title" style="margin-bottom:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          我的书库 · ${state.books.length} 本
+        </div>
+        <button class="btn-mini" style="background:var(--accent);color:#fff" onclick="showAddBookModal()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          加书
+        </button>
+      </div>
+      <div class="book-list">
+        ${state.books.map(b => renderBookCard(b)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBookCard(book){
+  const pageCount = book.pages ? book.pages.length : 0;
+  const noteCount = state.notes.filter(n => n.bookId === book.id).length;
+  return `
+    <div class="book-card" onclick="openBook('${book.id}')">
+      <div class="book-cover">${escapeHtml(book.cover || book.title.slice(0,1))}</div>
+      <div class="book-info">
+        <div class="book-title">${escapeHtml(book.title)}</div>
+        <div class="book-meta">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            ${pageCount} 页
+          </span>
+          ${book.subject ? `<span>📂 ${escapeHtml(book.subject)}</span>` : ''}
+          <span>📅 ${fmtDate(book.addedAt)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted-2);margin-top:4px">
+          🔖 ${noteCount} 条重点笔记
+        </div>
+        <div class="book-actions" onclick="event.stopPropagation()">
+          <button class="primary" onclick="openBook('${book.id}')">打开检索</button>
+          <button onclick="exportBook('${book.id}')">导出JSON</button>
+          <button class="danger" onclick="deleteBook('${book.id}')">删除</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============== 笔记页 ==============
+function renderNotesView(){
+  const notes = state.notes.filter(n => !n.archived);
+  if(notes.length === 0){
+    return `
+      <div class="card">
+        <div class="empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div class="empty-title">还没有笔记</div>
+          <div class="empty-desc">在检索页面找到重点内容后，点"标记为笔记"即可保存</div>
+          <button class="btn btn-accent" onclick="goView('search')">去检索 →</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="card">
+      <div class="section-title" style="margin-bottom:14px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        重点笔记 · ${notes.length} 条
+      </div>
+      ${notes.map(n => {
+        const book = state.books.find(b => b.id === n.bookId);
+        const reviewTs = n.lastReviewedAt || n.createdAt;
+        const reviewed = n.lastReviewedAt && daysAgo(n.lastReviewedAt) < 1;
+        const noteText = n.text || '';
+        const preview = noteText.length > 60 ? noteText.slice(0, 60) + '...' : noteText;
+        return `
+          <div class="note-card ${reviewed ? 'reviewed' : ''}" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onclick="jumpToNote('${n.id}')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="点击跳到本书本节">
+            <div class="note-meta">
+              <span class="note-book">${book ? escapeHtml(book.title) : '已删除的书'}</span>
+              <span class="note-page" style="background:var(--accent);color:#fff">第 ${n.page} 节 → 阅读</span>
+              <span>${fmtDate(n.createdAt)}</span>
+            </div>
+            <div class="note-text">${escapeHtml(preview)}</div>
+            <div class="note-meta" style="border-top:1px dashed var(--border);padding-top:6px;margin-top:8px">
+              <span>📅 ${n.lastReviewedAt ? '上次复习：' + fmtDate(n.lastReviewedAt) : '尚未复习'}</span>
+              <span style="font-size:11px;color:var(--muted-2)">${daysAgo(reviewTs) >= 7 ? '⚠️ 建议复习' : ''}</span>
+            </div>
+            <div class="note-actions" onclick="event.stopPropagation()">
+              <button class="primary" onclick="event.stopPropagation();markReviewed('${n.id}')">${reviewed ? '已复习 ✓' : '标记已复习'}</button>
+              <button onclick="event.stopPropagation();jumpToNote('${n.id}')">去阅读</button>
+              <button class="danger" onclick="event.stopPropagation();deleteNote('${n.id}')">删除</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ============== 阅读视图 ==============
+function renderReadView(){
+  if(state.books.length === 0){
+    return `
+      <div class="card">
+        <div class="empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <div class="empty-title">还没有书</div>
+          <div class="empty-desc">先在"书库"里导入一本书，再来阅读</div>
+          <button class="btn btn-accent" onclick="goView('books')">去书库</button>
+        </div>
+      </div>
+    `;
+  }
+  const book = state.books.find(b => b.id === state.currentBookId) || state.books[0];
+  const pages = book.pages || [];
+  // 确保 readingPageIdx 合法
+  if(state.readingPageIdx >= pages.length) state.readingPageIdx = 0;
+  if(state.readingPageIdx < 0) state.readingPageIdx = 0;
+  const curIdx = state.readingPageIdx;
+  const curPage = pages[curIdx] || {page:'?', text:'(空)'};
+
+  // 进度条
+  const progress = pages.length > 0 ? ((curIdx+1) / pages.length * 100) : 0;
+
+  // 章节标题：取第一行
+  const firstLine = (curPage.text || '').split('\n')[0].trim() || '(无标题)';
+
+  return `
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <select class="book-select" id="readBookSelect" style="flex:1;min-width:160px;margin-bottom:0">
+          ${state.books.map(b => `<option value="${b.id}" ${b.id === book.id ? 'selected' : ''}>${escapeHtml(b.title)}</option>`).join('')}
+        </select>
+        <button class="btn-mini" onclick="openTOC()" style="background:var(--accent);color:#fff">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          目录
+        </button>
+      </div>
+
+      <div style="background:var(--bg);border-radius:8px;height:6px;margin-bottom:14px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-light));width:${progress}%;transition:width .3s"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;color:var(--muted)">
+        <span>📍 第 <strong style="color:var(--primary)">${curIdx+1}</strong> / ${pages.length} 节</span>
+        <span style="color:var(--accent);font-weight:600">${escapeHtml(curPage.page)}</span>
+      </div>
+
+      <div id="readingContent" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;min-height:280px;max-height:520px;overflow-y:auto;font-size:16px;line-height:1.9;color:var(--text);white-space:pre-wrap">${highlightReadingText(curPage.text, state.pendingHighlightKeyword)}</div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="readingJumpTo(0)" style="flex:0 0 auto;min-width:60px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button class="btn btn-ghost" onclick="readingPrev()" style="flex:1;min-width:80px" ${curIdx === 0 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          上一节
+        </button>
+        <input type="number" id="jumpToPage" min="1" max="${pages.length}" value="${curIdx+1}" style="width:70px;padding:10px;border:1px solid var(--border);border-radius:8px;text-align:center;font-size:15px" onchange="readingJumpTo(this.value - 1)">
+        <button class="btn btn-ghost" onclick="readingNext()" style="flex:1;min-width:80px" ${curIdx === pages.length-1 ? 'disabled' : ''}>
+          下一节
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button class="btn btn-ghost" onclick="readingJumpTo(${pages.length-1})" style="flex:0 0 auto;min-width:60px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-accent" onclick="markNoteFromReading()" style="flex:1;min-width:140px">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          标记为笔记
+        </button>
+        <button class="btn btn-ghost" onclick="copyReadingPage()" style="flex:1;min-width:140px">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          复制本节
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function readingPrev(){
+  if(state.readingPageIdx > 0){ state.readingPageIdx--; render(); }
+}
+function readingNext(){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(book && state.readingPageIdx < book.pages.length-1){ state.readingPageIdx++; render(); }
+}
+function readingJumpTo(idx){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  idx = parseInt(idx);
+  if(isNaN(idx) || idx < 0) idx = 0;
+  if(idx >= book.pages.length) idx = book.pages.length - 1;
+  state.readingPageIdx = idx;
+  render();
+}
+function jumpToPageAndRead(pageLabel, keyword){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  const idx = book.pages.findIndex(p => String(p.page) === String(pageLabel));
+  if(idx >= 0){
+    state.readingPageIdx = idx;
+    state.pendingHighlightKeyword = keyword || '';
+    state.currentView = 'read';
+    render();
+    if(keyword){
+      // 渲染完后滚动到关键词首次出现位置
+      setTimeout(() => scrollToKeyword(keyword), 80);
+    } else {
+      showToast(`已跳到 ${book.title} 第 ${pageLabel} 节`, 'success');
+    }
+  }
+}
+
+// 在阅读视图里滚动到关键词首次出现位置并高亮
+function scrollToKeyword(keyword){
+  if(!keyword) return;
+  const container = document.getElementById('readingContent');
+  if(!container) return;
+  // 找到首个 mark 元素（renderReadView 会把关键词包成 mark.first-hl）
+  const mark = container.querySelector('mark.first-hl');
+  if(mark){
+    mark.scrollIntoView({behavior: 'smooth', block: 'center'});
+    // 加个临时动画class
+    mark.classList.add('hl-flash');
+    setTimeout(() => mark.classList.remove('hl-flash'), 2000);
+    showToast(`已定位到"${keyword}"首次出现位置`, 'success');
+  } else {
+    // 没找到（页面没关键词），只滚动顶部
+    container.scrollTop = 0;
+    showToast(`已跳到该节（关键词不在这一节）`, 'success');
+  }
+}
+
+function openTOC(){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  const items = book.pages.map((p, idx) => {
+    const title = (p.text || '').split('\n')[0].trim() || '(无标题)';
+    const isCur = idx === state.readingPageIdx;
+    return `
+      <div onclick="readingJumpTo(${idx}); closeModal();" style="padding:12px;border-radius:8px;cursor:pointer;${isCur ? 'background:var(--accent);color:#fff' : 'border-bottom:1px solid var(--border)'}" onmouseover="if(!${isCur})this.style.background='var(--bg)'" onmouseout="if(!${isCur})this.style.background=''">
+        <div style="font-size:13px;font-weight:500">${escapeHtml(title.slice(0, 60))}${title.length > 60 ? '...' : ''}</div>
+        <div style="font-size:11px;${isCur ? 'opacity:.85' : 'color:var(--muted)'};margin-top:2px">第 ${p.page} 节 · ${idx+1}/${book.pages.length}</div>
+      </div>
+    `;
+  }).join('');
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      目录 · ${escapeHtml(book.title)}
+    </div>
+    <div style="max-height:60vh;overflow-y:auto">${items}</div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>
+  `);
+}
+
+function markNoteFromReading(){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  const page = book.pages[state.readingPageIdx];
+  if(!page) return;
+  const text = prompt('把这节的核心要点记下来：', '');
+  if(!text || !text.trim()) return;
+  const notes = getNotes();
+  notes.unshift({id: genId(), bookId: book.id, page: page.page, text: text.trim(), createdAt: Date.now(), lastReviewedAt: null, archived: false});
+  saveNotes(notes);
+  state.notes = notes;
+  showToast('已标记为笔记 📌', 'success');
+}
+
+function copyReadingPage(){
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if(!book) return;
+  const page = book.pages[state.readingPageIdx];
+  if(!page) return;
+  const text = `【${book.title} · 第${page.page}节】\n\n${page.text}\n\n（提示：把这段内容贴给AI助手，让它帮你总结成精炼的答案）`;
+  copyToClipboard(text);
+  showToast('已复制本节，可粘给AI总结 ✨', 'success');
+}
+
+// ============== 交互方法 ==============
+// 内联搜索（兼容保留，不再被 input 调用）
+let _inlineSearchTimer = null;
+function searchFromInline(value){
+  clearTimeout(_inlineSearchTimer);
+  _inlineSearchTimer = setTimeout(() => doSearch(value), 300);
+}
+
+function doSearch(keyword){
+  state.searchKeyword = keyword;
+  state.expandedPage = null;
+  // 修复：currentBookId 匹配不到书时 fallback 到第一本
+  let book = state.books.find(b => b.id === state.currentBookId);
+  if(!book && state.books.length > 0){
+    book = state.books[0];
+    state.currentBookId = book.id;
+  }
+  if(!book || !keyword.trim()){
+    state.searchResults = [];
+    if(state.currentView === 'search') updateSearchViewPartial(book);
+    else render();
+    return;
+  }
+  state.searchResults = searchInBook(book, keyword);
+  // 记录搜索历史
+  const searches = getSearches().filter(s => s.keyword !== keyword.trim());
+  searches.unshift({keyword: keyword.trim(), lastUsedAt: Date.now()});
+  saveSearches(searches.slice(0, 10));
+  state.searches = searches;
+  // 修复：搜索时只更新结果区域，不重建整个 DOM，避免输入框失焦
+  if(state.currentView === 'search') updateSearchViewPartial(book);
+  else render();
+}
+
+// 局部更新搜索结果（不触碰输入框，保持焦点和光标位置）
+function updateSearchViewPartial(book){
+  const resultsDiv = document.getElementById('searchResults');
+  if(!resultsDiv){ render(); return; } // 兜底
+
+  // 更新 meta / tips 区域（在 search-box 和 searchResults 之间）
+  const searchBox = document.querySelector('#mainView .search-box');
+  if(searchBox){
+    const oldMeta = searchBox.nextElementSibling;
+    const isMetaOrTips = oldMeta && (oldMeta.classList.contains('search-meta') || oldMeta.classList.contains('tips'));
+    const metaHtml = state.searchKeyword ? `
+      <div class="search-meta">
+        <span>📌 《${escapeHtml(book ? book.title : '?')}》 共命中 <strong>${state.searchResults.reduce((s,r)=>s+r.count,0)}</strong> 处，分布于 <strong>${state.searchResults.length}</strong> 页</span>
+        <span style="color:var(--muted-2);font-size:12px">页面按命中数排序</span>
+      </div>
+    ` : `
+      <div class="tips">
+        <strong>💡 试试这些：</strong>
+        <ol>
+          <li>直接搜索关键词，如「<b>限售股转让</b>」「<b>个人所得税税率</b>」</li>
+          <li>支持多关键词（用空格分隔），全部命中才会显示</li>
+          <li>搜索结果按命中次数排序，点击展开看完整页面</li>
+          <li>找到重点可以一键标记为笔记，下次复习不丢</li>
+        </ol>
+      </div>
+    `;
+    if(isMetaOrTips){
+      oldMeta.outerHTML = metaHtml;
+    } else {
+      searchBox.insertAdjacentHTML('afterend', metaHtml);
+    }
+  }
+
+  // 更新结果列表
+  if(state.searchResults.length === 0 && state.searchKeyword){
+    resultsDiv.innerHTML = `
+      <div class="empty" style="padding:30px 0">
+        <div class="empty-title">未找到匹配内容</div>
+        <div class="empty-desc">试试换个关键词，或切换到其他书籍</div>
+      </div>
+    `;
+  } else if(state.searchResults.length > 0){
+    resultsDiv.innerHTML = state.searchResults.map(r => renderSearchResultCard(book, r)).join('');
+  } else {
+    resultsDiv.innerHTML = '';
+  }
+
+  // 更新侧边栏统计和待办（不触碰 mainView）
+  renderTodo();
+  renderStats();
+  updateBackupHint();
+}
+
+function toggleExpand(page){
+  state.expandedPage = state.expandedPage === page ? null : page;
+  // 局部更新，不重建整个 DOM
+  const book = state.books.find(b => b.id === state.currentBookId) || state.books[0];
+  if(book && state.currentView === 'search') updateSearchViewPartial(book);
+  else render();
+}
+
+function goSearch(bookId){
+  state.currentBookId = bookId;
+  state.currentView = 'search';
+  state.searchKeyword = '';
+  state.searchResults = [];
+  render();
+  setTimeout(() => document.getElementById('searchInput')?.focus(), 50);
+}
+
+function goSearchKeyword(kw){
+  if(state.books.length === 0){ goView('books'); return; }
+  state.currentView = 'search';
+  state.searchKeyword = kw;
+  const book = state.books.find(b => b.id === state.currentBookId) || state.books[0];
+  state.searchResults = searchInBook(book, kw);
+  render();
+}
+
+function openBook(bookId){
+  state.currentBookId = bookId;
+  state.currentView = 'search';
+  state.searchKeyword = '';
+  state.searchResults = [];
+  render();
+  setTimeout(() => document.getElementById('searchInput')?.focus(), 50);
+}
+
+function markNotePrompt(bookId, page){
+  const text = prompt('记点什么？把这页的核心要点写下来：', '');
+  if(!text || !text.trim()) return;
+  const notes = getNotes();
+  notes.unshift({id: genId(), bookId, page, text: text.trim(), createdAt: Date.now(), lastReviewedAt: null, archived: false});
+  saveNotes(notes);
+  state.notes = notes;
+  showToast('已标记为笔记 📌', 'success');
+  render();
+}
+
+function copyPageText(bookId, page){
+  const book = state.books.find(b => b.id === bookId);
+  if(!book) return;
+  const p = book.pages.find(pp => pp.page === page);
+  if(!p) return;
+  const text = `【${book.title} · 第${page}页】\n\n${p.text}\n\n（提示：把这段内容复制给AI助手，让它帮你总结成精炼的答案）`;
+  copyToClipboard(text);
+  showToast('已复制本段，可粘贴给AI总结 ✨', 'success');
+}
+
+function copyToClipboard(text){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else fallbackCopy(text);
+  function fallbackCopy(t){
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  }
+}
+
+function markReviewed(noteId){
+  const notes = getNotes();
+  const n = notes.find(x => x.id === noteId);
+  if(n){ n.lastReviewedAt = Date.now(); saveNotes(notes); state.notes = notes; showToast('复习完成 ✓'); render(); }
+}
+
+function deleteNote(noteId){
+  if(!confirm('确定删除这条笔记？')) return;
+  const notes = getNotes().filter(n => n.id !== noteId);
+  saveNotes(notes); state.notes = notes;
+  showToast('已删除'); render();
+}
+
+function jumpToNote(noteId){
+  const n = state.notes.find(x => x.id === noteId);
+  if(!n){ showToast('这条笔记对应的书不存在了','error'); return; }
+  state.currentBookId = n.bookId;
+  // 跳到阅读视图对应页
+  const book = state.books.find(b => b.id === n.bookId);
+  if(book && book.pages){
+    const idx = book.pages.findIndex(p => String(p.page) === String(n.page));
+    if(idx >= 0) state.readingPageIdx = idx;
+    else state.readingPageIdx = 0;
+  }
+  state.currentView = 'read';
+  render();
+  showToast(`已跳到《${book ? book.title : ''}》第 ${n.page} 节`, 'success');
+}
+
+function goView(view){
+  state.currentView = view;
+  render();
+}
+
+function exportBook(bookId){
+  const book = state.books.find(b => b.id === bookId);
+  if(!book) return;
+  const data = JSON.stringify([book], null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${book.title}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出这本书', 'success');
+}
+
+function deleteBook(bookId){
+  const book = state.books.find(b => b.id === bookId);
+  if(!book) return;
+  if(!confirm(`确定删除《${book.title}》？\n\n提示：相关的笔记也会一并删除。`)) return;
+  const books = getBooks().filter(b => b.id !== bookId);
+  saveBooks(books);
+  const notes = getNotes().filter(n => n.bookId !== bookId);
+  saveNotes(notes);
+  if(state.currentBookId === bookId) state.currentBookId = '';
+  state.books = books; state.notes = notes;
+  showToast('书已删除'); render();
+}
+
+// ============== 模态框：加书 ==============
+function showAddBookModal(){
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      添加一本书
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">书名</label>
+      <input class="form-input" id="bookTitle" placeholder="如：税法（II）2024版">
+    </div>
+    <div class="form-row">
+      <label class="form-label">分类（可选）</label>
+      <input class="form-input" id="bookSubject" placeholder="如：税务师考试 / 财经法规">
+    </div>
+    <div class="form-row">
+      <label class="form-label">导入方式</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="modeText" onclick="switchImportMode('text')" style="flex:1">📝 粘贴文本</button>
+        <button class="btn btn-ghost" id="modeJson" onclick="switchImportMode('json')" style="flex:1">📁 导入JSON</button>
+      </div>
+    </div>
+
+    <div class="form-row" id="textBox">
+      <label class="form-label">页面文本</label>
+      <textarea class="form-input" id="bookText" rows="6" placeholder="把OCR出来的文本粘到这里，支持两种来源：&#10;&#10;A. 百度网盘OCR → 复制识别结果 → 粘进来（自动智能分页）&#10;B. 自己整理：用 --- 第1页 --- / --- PAGE 1 --- / 【第1页】 分隔&#10;&#10;下面是百度网盘OCR的典型输出..."></textarea>
+
+      <label class="form-label" style="margin-top:12px">分页方式</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+        <label style="display:flex;align-items:flex-start;gap:6px;padding:8px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="radio" name="splitMode" value="smart" checked style="margin-top:3px"><span><b>🪄 智能识别（推荐）</b><br><span style="color:var(--muted);font-size:12px">自动检测 ---第X页---、PAGE X、章节标题</span></span></label>
+        <label style="display:flex;align-items:flex-start;gap:6px;padding:8px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="radio" name="splitMode" value="delimiter" style="margin-top:3px"><span><b>📄 按分隔符</b><br><span style="color:var(--muted);font-size:12px">仅识别 ---第X页--- 等标记</span></span></label>
+        <label style="display:flex;align-items:flex-start;gap:6px;padding:8px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="radio" name="splitMode" value="chapter" style="margin-top:3px"><span><b>📖 按章节标题</b><br><span style="color:var(--muted);font-size:12px">第一章/Chapter/第二节</span></span></label>
+        <label style="display:flex;align-items:flex-start;gap:6px;padding:8px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="radio" name="splitMode" value="bycount" style="margin-top:3px"><span><b>📏 按字数</b><br><span style="color:var(--muted);font-size:12px">每800字算一页</span></span></label>
+      </div>
+
+      <div id="splitPreview" style="display:none;margin-top:10px;padding:10px;background:#f0f7f4;border:1px solid #c8e6c9;border-radius:8px;font-size:13px;color:#2e5d3e"></div>
+
+      <div class="form-hint">
+        💡 <b>百度网盘 OCR 工作流：</b>
+        <ol style="padding-left:18px;margin-top:4px">
+          <li>打开 <code>yun.baidu.com</code> → 把 PDF 拖进"我的网盘"</li>
+          <li>右键 PDF → <b>"更多"</b> → <b>"提取文字"</b>（或在文件预览里点"提取文字"）</li>
+          <li>等几十秒 → 全选识别结果 → 复制 → 粘到上面文本框</li>
+          <li>智能识别会自动按页/章/字数切分，下面会显示分页预览</li>
+        </ol>
+        ⚠️ 扫描版PDF提取文字偶尔有乱码识别，看不懂的地方在搜索时跳过即可。
+      </div>
+    </div>
+
+    <div class="form-row" id="jsonBox" style="display:none">
+      <label class="form-label">选择JSON文件</label>
+      <input type="file" id="bookJson" accept=".json,application/json" class="form-input">
+      <div class="form-hint">JSON格式：<code>[{"title":"书名","pages":[{"page":1,"text":"..."}]}]</code></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-accent" onclick="confirmAddBook()">📥 导入</button>
+    </div>
+  `);
+  // 绑定实时预览
+  setTimeout(() => {
+    const ta = document.getElementById('bookText');
+    const radios = document.querySelectorAll('input[name="splitMode"]');
+    if(!ta) return;
+    const update = () => updateSplitPreview();
+    ta.addEventListener('input', update);
+    radios.forEach(r => r.addEventListener('change', update));
+  }, 50);
+}
+
+function updateSplitPreview(){
+  const ta = document.getElementById('bookText');
+  const box = document.getElementById('splitPreview');
+  if(!ta || !box) return;
+  const text = ta.value.trim();
+  if(!text){ box.style.display = 'none'; return; }
+  const modeRadios = document.querySelectorAll('input[name="splitMode"]');
+  let mode = 'smart';
+  for(const r of modeRadios){ if(r.checked){ mode = r.value; break; } }
+  const pages = parseTextToPages(text, mode);
+  const modeLabel = {smart:'智能识别',delimiter:'按分隔符',chapter:'按章节',bycount:'按字数'}[mode] || mode;
+  if(pages.length === 0){
+    box.innerHTML = '⚠️ 当前模式未识别到任何分页，可换一个模式试试';
+    box.style.display = '';
+    return;
+  }
+  const totalChars = text.length;
+  const avgChars = Math.round(totalChars / pages.length);
+  box.innerHTML = `✅ <b>${modeLabel}</b> 识别出 <b>${pages.length}</b> 页` +
+    (pages.length > 0 ? `，平均 ${avgChars} 字/页` : '') +
+    ` · 总 ${(totalChars/1024).toFixed(1)} KB` +
+    (pages.length > 0 ? ` · 已分配到 页 ${pages[0].page} ~ ${pages[pages.length-1].page}` : '');
+  box.style.display = '';
+}
+
+let currentImportMode = 'text';
+function switchImportMode(mode){
+  currentImportMode = mode;
+  document.getElementById('modeText').style.background = mode === 'text' ? 'var(--primary)' : '';
+  document.getElementById('modeText').style.color = mode === 'text' ? '#fff' : '';
+  document.getElementById('modeJson').style.background = mode === 'json' ? 'var(--primary)' : '';
+  document.getElementById('modeJson').style.color = mode === 'json' ? '#fff' : '';
+  document.getElementById('textBox').style.display = mode === 'text' ? '' : 'none';
+  document.getElementById('jsonBox').style.display = mode === 'json' ? '' : 'none';
+}
+
+function confirmAddBook(){
+  const title = document.getElementById('bookTitle').value.trim();
+  const subject = document.getElementById('bookSubject').value.trim();
+  if(!title){ showToast('请填写书名','error'); return; }
+
+  let newBook = null;
+  if(currentImportMode === 'text'){
+    const text = document.getElementById('bookText').value.trim();
+    if(!text){ showToast('请粘贴文本内容','error'); return; }
+    const modeRadios = document.querySelectorAll('input[name="splitMode"]');
+    let mode = 'smart';
+    for(const r of modeRadios){ if(r.checked){ mode = r.value; break; } }
+    const pages = parseTextToPages(text, mode);
+    if(pages.length === 0){ showToast('未识别到任何分页，请用"--- 第X页 ---"分隔或换一种模式','error'); return; }
+    newBook = {id: genId(), title, subject, cover: title.slice(0,1), pages, addedAt: Date.now()};
+  } else {
+    const file = document.getElementById('bookJson').files[0];
+    if(!file){ showToast('请选择JSON文件','error'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        const data = JSON.parse(e.target.result);
+        const arr = Array.isArray(data) ? data : [data];
+        if(!arr[0] || !arr[0].title){ showToast('JSON格式不正确','error'); return; }
+        const importedBooks = arr.map(b => ({...b, id: b.id || genId(), addedAt: b.addedAt || Date.now()}));
+        const books = getBooks().concat(importedBooks);
+        saveBooks(books); state.books = books;
+        if(importedBooks[0]) state.currentBookId = importedBooks[0].id;
+        closeModal();
+        showToast(`已导入 ${importedBooks.length} 本书`, 'success');
+        render();
+      }catch(err){ showToast('JSON解析失败：' + err.message, 'error'); }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  if(newBook){
+    const books = getBooks();
+    books.push(newBook);
+    saveBooks(books);
+    state.books = books;
+    state.currentBookId = newBook.id;
+    closeModal();
+    showToast(`已添加《${newBook.title}》 · 共${newBook.pages.length}页`, 'success');
+    render();
+  }
+}
+
+// ===== 分页模式 =====
+let currentSplitMode = 'smart'; // smart | delimiter | chapter | bycount
+
+function parseTextToPages(text, mode){
+  mode = mode || currentSplitMode;
+  if(mode === 'delimiter'){
+    return splitByDelimiter(text);
+  }
+  if(mode === 'chapter'){
+    return splitByChapter(text);
+  }
+  if(mode === 'bycount'){
+    return splitByCount(text, 800);
+  }
+  // smart: 自动识别多种分隔
+  const byDelim = splitByDelimiter(text);
+  if(byDelim.length >= 5) return byDelim;
+  // 没有足够分隔符，回退到章节标题
+  const byChap = splitByChapter(text);
+  if(byChap.length >= 3) return byChap;
+  // 都不行，按字数估算
+  return splitByCount(text, 800);
+}
+
+function splitByDelimiter(text){
+  const re = /---[\s\u3000]*页码[\s\u3000]*[:：]?[\s\u3000]*(\d+)[\s\u3000]*---|---[\s\u3000]*第\s*(\d+)\s*页[\s\u3000]*---|---[\s\u3000]*PAGE[\s\u3000]*(\d+)[\s\u3000]*---|---[\s\u3000]*PAGE[\s\u3000]*BREAK[\s\u3000]*---|【[\s\u3000]*第\s*(\d+)\s*页[\s\u3000]*】|\[\s*第\s*(\d+)\s*页\s*\]/gi;
+  const matches = [];
+  let m;
+  while((m = re.exec(text)) !== null){
+    matches.push({idx: m.index, page: parseInt(m[1]||m[2]||m[3]||m[4]||m[5]), end: m.index + m[0].length});
+  }
+  if(matches.length === 0) return [];
+  const result = [];
+  for(let i=0; i<matches.length; i++){
+    const start = matches[i], end = matches[i+1] || {idx: text.length};
+    const content = text.slice(start.end, end.idx).trim();
+    if(content) result.push({page: start.page || (i+1), text: content});
+  }
+  return result;
+}
+
+// 按章节/节标题切分（中英文教辅通用）
+function splitByChapter(text){
+  const re = /(?:^|\n)\s*(?:【\s*)?(?:第\s*[一二三四五六七八九十百千零0-9０-９]+\s*[章节讲](?:\s*[一二三四五六七八九十百千零0-9０-９]*)?|Chapter\s*\d+|章\s*\d+|节\s*[一二三四五六七八九十百千0-9０-９]+)(?:\s*[】【]])?[：:、\s][^\n]*/g;
+  const matches = [];
+  let m;
+  while((m = re.exec(text)) !== null){
+    matches.push({idx: m.index, title: m[0].trim()});
+  }
+  if(matches.length < 2){
+    // 没有明显的章节标题，按"双换行"分块，每若干块作为一页
+    const blocks = text.split(/\n{2,}/).filter(b => b.trim());
+    if(blocks.length === 0) return [];
+    const pageSize = 8; // 每 8 个段落合成一页
+    const result = [];
+    for(let i=0; i<blocks.length; i += pageSize){
+      result.push({page: result.length + 1, text: blocks.slice(i, i+pageSize).join('\n\n')});
+    }
+    return result;
+  }
+  const result = [];
+  for(let i=0; i<matches.length; i++){
+    const start = matches[i], end = matches[i+1] || {idx: text.length};
+    const content = text.slice(start.idx, end.idx).trim();
+    if(content) result.push({page: result.length + 1, text: content});
+  }
+  return result;
+}
+
+// 按字数估算
+function splitByCount(text, charsPerPage){
+  if(!text || text.length === 0) return [];
+  const cleanText = text.replace(/\r\n/g, '\n');
+  const result = [];
+  let pos = 0;
+  let page = 1;
+  while(pos < cleanText.length){
+    const end = Math.min(pos + charsPerPage, cleanText.length);
+    let cutEnd = end;
+    // 优先在换行处断开
+    if(end < cleanText.length){
+      const near = cleanText.slice(pos + charsPerPage - 50, end + 50);
+      const lastNL = near.lastIndexOf('\n');
+      if(lastNL >= 0) cutEnd = pos + charsPerPage - 50 + lastNL;
+    }
+    const chunk = cleanText.slice(pos, cutEnd).trim();
+    if(chunk) result.push({page, text: chunk});
+    pos = cutEnd;
+    page++;
+  }
+  return result;
+}
+
+// ============== 备份导入 ==============
+function exportData(){
+  const data = {
+    books: getBooks(),
+    notes: getNotes(),
+    searches: getSearches(),
+    exportedAt: Date.now(),
+    version: '1.0'
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `税法知识点查询工具_备份_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出完整备份 ✓', 'success');
+}
+
+function showImportModal(){
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      导入备份
+    </div>
+    <div class="form-row">
+      <label class="form-label">选择备份JSON文件</label>
+      <input type="file" id="importFile" accept=".json,application/json" class="form-input">
+      <div class="form-hint">导入方式：覆盖现有数据 / 合并追加</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">导入方式</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="impMerge" onclick="selectImportMode('merge')" style="flex:1">合并（推荐）</button>
+        <button class="btn btn-ghost" id="impReplace" onclick="selectImportMode('replace')" style="flex:1">覆盖</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-accent" onclick="confirmImport()">导入</button>
+    </div>
+  `);
+}
+
+let currentImportDataMode = 'merge';
+function selectImportMode(m){
+  currentImportDataMode = m;
+  document.getElementById('impMerge').style.background = m==='merge' ? 'var(--primary)' : '';
+  document.getElementById('impMerge').style.color = m==='merge' ? '#fff' : '';
+  document.getElementById('impReplace').style.background = m==='replace' ? 'var(--danger)' : '';
+  document.getElementById('impReplace').style.color = m==='replace' ? '#fff' : '';
+}
+
+function confirmImport(){
+  const file = document.getElementById('importFile').files[0];
+  if(!file){ showToast('请选择文件','error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      const booksIn = Array.isArray(data.books) ? data.books : [];
+      const notesIn = Array.isArray(data.notes) ? data.notes : [];
+      const searchesIn = Array.isArray(data.searches) ? data.searches : [];
+
+      if(currentImportDataMode === 'replace'){
+        if(!confirm('覆盖模式：将清空现有数据后导入，确定？')) return;
+        saveBooks(booksIn); saveNotes(notesIn); saveSearches(searchesIn);
+      } else {
+        // 合并：按id去重
+        const curBooks = getBooks();
+        const curNotes = getNotes();
+        const curSearches = getSearches();
+        const bookIds = new Set(curBooks.map(b => b.id));
+        const noteIds = new Set(curNotes.map(n => n.id));
+        for(const b of booksIn) if(!bookIds.has(b.id)) curBooks.push(b);
+        for(const n of notesIn) if(!noteIds.has(n.id)) curNotes.push(n);
+        const kwSet = new Set(curSearches.map(s => s.keyword));
+        for(const s of searchesIn) if(!kwSet.has(s.keyword)) curSearches.push(s);
+        saveBooks(curBooks); saveNotes(curNotes); saveSearches(curSearches);
+      }
+      closeModal();
+      showToast('导入完成 ✓', 'success');
+      render();
+    }catch(err){ showToast('文件解析失败：' + err.message, 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+// ============== 模态框底层 ==============
+function showModal(html){
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if(e.target.id === 'modal') closeModal();
+});
+
+// ============== Toast ==============
+let toastTimer = null;
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 2200);
+}
+
+// ============== Tab 切换 ==============
+document.querySelectorAll('.tab, .pc-nav a').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    const view = el.dataset.view;
+    if(view){ state.currentView = view; render(); }
+  });
+});
+
+// ============== Init ==============
+(async function init(){
+  // 直接从 localStorage 加载数据（无需登录）
+  loadAll();
+  if(!Array.isArray(_mem.books)) _mem.books = [];
+  if(!Array.isArray(_mem.notes)) _mem.notes = [];
+  if(!Array.isArray(_mem.searches)) _mem.searches = [];
+  console.log('[init] 数据层就绪：books=' + _mem.books.length);
+  // 首次启动尝试自动加载同目录的 JSON（CloudStudio 部署场景）
+  if(_mem.books.length === 0){
+    await tryAutoLoadBooks();
+  }
+  if(!Array.isArray(_mem.books)) _mem.books = [];
+  render();
+})();
+
+// ============== 关于 ==============
+function showAbout(){
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      关于 · 税法知识点查询工具
+    </div>
+    <div style="line-height:1.8;font-size:14px;color:var(--text)">
+      <p>一个为<b>税务师备考</b>量身打造的轻量知识点检索工具。</p>
+      <p><b>核心功能</b></p>
+      <ul style="padding-left:20px;margin-top:4px">
+        <li>🔍 <b>关键词直达考点页码</b>：输入"限售股转让"即可找到所有出现位置</li>
+        <li>📖 <b>在线阅读</b>：一键跳转到原文位置，关键词首次出现位置自动滚动并高亮</li>
+        <li>🔖 <b>重点笔记</b>：把核心要点记下来，7 天后自动提醒复习</li>
+        <li>📥 <b>多源导入</b>：支持粘贴文本、拖入 JSON、自动加载目录下的 tax*.json</li>
+      </ul>
+      <p><b>数据存储</b></p>
+      <p>所有数据保存在你<b>当前浏览器</b>的 localStorage 里（不上传服务器）。</p>
+      <ul style="padding-left:20px;margin-top:4px">
+        <li>📤 <b>导出 JSON</b> — 备份完整数据（书库 + 笔记 + 搜索历史）</li>
+        <li>📥 <b>导入恢复</b> — 换电脑/换浏览器时迁移数据</li>
+      </ul>
+      <p style="margin-top:14px;color:var(--muted);font-size:13px">💡 建议每隔一段时间导出一次备份，避免浏览器清理数据时丢失。</p>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>
+  `);
+}
+
+// 自动加载同目录的 JSON 文件（部署场景）
+// 关键：先 fetch 看看实际有什么书，合并到当前 books 而不是覆盖
+async function tryAutoLoadBooks(){
+  const candidates = ['tax1-2026.json', 'tax2-2026.json', 'books.json'];
+  const loaded = [];
+  for(const fn of candidates){
+    try{
+      const resp = await fetch(fn + '?t=' + Date.now(), {cache: 'no-cache'});
+      if(!resp.ok) continue;
+      const data = await resp.json();
+      const arr = Array.isArray(data) ? data : [data];
+      for(const b of arr){
+        if(b && b.title && Array.isArray(b.pages)){
+          loaded.push({...b, id: b.id || genId(), addedAt: b.addedAt || Date.now()});
+        }
+      }
+    }catch(e){
+      // 文件不存在或加载失败，忽略
+    }
+  }
+  if(loaded.length > 0){
+    _mem.books = loaded;
+    saveBooks(loaded);
+    state.books = loaded;
+    if(loaded[0]) state.currentBookId = loaded[0].id;
+    console.log(`[自动加载] 已加载 ${loaded.length} 本书：${loaded.map(b=>b.title).join(', ')}`);
+    showToast(`📚 已自动加载 ${loaded.length} 本书`, 'success');
+  }else{
+    console.log('[自动加载] 同目录没有找到 JSON 文件');
+  }
+}
+
+window.addEventListener('resize', () => renderTabs());
+window.addEventListener('hashchange', () => {
+  const view = location.hash.replace('#','');
+  if(['search','books','notes'].includes(view)){ state.currentView = view; render(); }
+});
+
+// ============== 拖入 JSON 自动导入 ==============
+let dragCount = 0;
+const dragHint = document.createElement('div');
+dragHint.style.cssText = 'position:fixed;inset:0;background:rgba(44,62,80,.85);z-index:9999;display:none;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:600;pointer-events:none';
+dragHint.innerHTML = '<div style="text-align:center"><div style="font-size:64px;margin-bottom:16px">📥</div><div>松开鼠标即可导入 JSON 文件</div></div>';
+document.body.appendChild(dragHint);
+
+window.addEventListener('dragenter', e => {
+  if(!e.dataTransfer || !e.dataTransfer.types || ![...e.dataTransfer.types].includes('Files')) return;
+  dragCount++;
+  dragHint.style.display = 'flex';
+});
+window.addEventListener('dragover', e => {
+  if(e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault();
+});
+window.addEventListener('dragleave', e => {
+  dragCount--;
+  if(dragCount <= 0){ dragCount = 0; dragHint.style.display = 'none'; }
+});
+window.addEventListener('drop', e => {
+  dragCount = 0;
+  dragHint.style.display = 'none';
+  if(!e.dataTransfer || !e.dataTransfer.files.length){
+    showToast('没检测到文件，请直接拖 .json 文件到窗口里', 'error');
+    return;
+  }
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  showToast(`📄 收到文件：${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'success');
+  if(!file.name.toLowerCase().endsWith('.json')){
+    showToast(`文件 "${file.name}" 不是 .json 后缀，请确认是 JSON 文件`, 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const text = ev.target.result;
+      console.log('[导入] 文件长度:', text.length, '前50字符:', JSON.stringify(text.slice(0,50)));
+      const data = JSON.parse(text);
+      const arr = Array.isArray(data) ? data : [data];
+      const bookObjects = arr.filter(x => x && x.title && Array.isArray(x.pages));
+      if(bookObjects.length === 0){
+        showToast('JSON 里没找到有效书籍（需含 title 和 pages 字段）', 'error');
+        return;
+      }
+      const books = getBooks();
+      const newBooks = bookObjects.map(b => ({...b, id: b.id || genId(), addedAt: b.addedAt || Date.now()}));
+      books.push(...newBooks);
+      saveBooks(books);
+      state.books = books;
+      state.currentBookId = newBooks[0].id;
+      showToast(`✅ 已导入 ${newBooks.length} 本书：${newBooks.map(b=>b.title).join('、')}`, 'success');
+      updateBackupHint();
+      state.currentView = 'search';
+      render();
+    }catch(err){
+      console.error('[导入] JSON 解析失败:', err);
+      showToast(`JSON 解析失败：${err.message}`, 'error');
+    }
+  };
+  reader.onerror = err => {
+    console.error('[导入] 文件读取失败:', err);
+    showToast('文件读取失败，文件可能损坏或权限不足', 'error');
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+</script>
+
+</body>
+</html>
