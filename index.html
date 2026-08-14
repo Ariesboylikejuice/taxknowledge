@@ -995,9 +995,19 @@ function renderNotesView(){
   }
   return `
     <div class="card">
-      <div class="section-title" style="margin-bottom:14px">
+      <div class="section-title" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        重点笔记 · ${notes.length} 条
+        <span>重点笔记 · ${notes.length} 条</span>
+        <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-mini" onclick="exportNotesWord()" title="导出为 Word 文档">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            导出Word
+          </button>
+          <button class="btn-mini" onclick="showImportWordModal()" title="从 Word 文档导入笔记">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            导入Word
+          </button>
+        </span>
       </div>
       ${notes.map(n => {
         const book = state.books.find(b => b.id === n.bookId);
@@ -1892,6 +1902,439 @@ function confirmImport(){
     }catch(err){ showToast('文件解析失败：' + err.message, 'error'); }
   };
   reader.readAsText(file);
+}
+
+// ============== Word 笔记导出 / 导入 ==============
+// 纯前端实现：生成合法 .docx（ZIP store + CRC32），并解析 .docx/.doc 还原为笔记
+const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const _enc = (s) => new TextEncoder().encode(s);
+const _dec = (b) => new TextDecoder('utf-8').decode(b);
+
+function escapeXml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]
+  ));
+}
+
+// ---------- CRC32 ----------
+const _CRC_TABLE = (function(){
+  const t = new Uint32Array(256);
+  for(let n=0;n<256;n++){
+    let c = n;
+    for(let k=0;k<8;k++){ c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); }
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++){ c = _CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ---------- 极简 ZIP 写入（store 方式，无需外部库） ----------
+function makeZip(files){
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  for(const f of files){
+    const nameBytes = _enc(f.name);
+    const data = f.data;
+    const crc = crc32(data);
+    const lh = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0, true);
+    dv.setUint16(8, 0, true);          // 压缩方式 0 = store
+    dv.setUint16(10, 0, true);         // 修改时间
+    dv.setUint16(12, 0x21, true);      // 修改日期 1980-01-01
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true);
+    dv.setUint32(22, data.length, true);
+    dv.setUint16(26, nameBytes.length, true);
+    dv.setUint16(28, 0, true);
+    lh.set(nameBytes, 30);
+    chunks.push(lh, data);
+
+    const cd = new Uint8Array(46 + nameBytes.length);
+    const cdv = new DataView(cd.buffer);
+    cdv.setUint32(0, 0x02014b50, true);
+    cdv.setUint16(4, 20, true);
+    cdv.setUint16(6, 20, true);
+    cdv.setUint16(8, 0, true);
+    cdv.setUint16(10, 0, true);
+    cdv.setUint16(12, 0, true);
+    cdv.setUint16(14, 0x21, true);
+    cdv.setUint32(16, crc, true);
+    cdv.setUint32(20, data.length, true);
+    cdv.setUint32(24, data.length, true);
+    cdv.setUint16(28, nameBytes.length, true);
+    cdv.setUint16(30, 0, true);
+    cdv.setUint16(32, 0, true);
+    cdv.setUint16(34, 0, true);
+    cdv.setUint16(36, 0, true);
+    cdv.setUint32(38, 0, true);
+    cdv.setUint32(42, offset, true);
+    cd.set(nameBytes, 46);
+    central.push(cd);
+
+    offset += lh.length + data.length;
+  }
+  let cdSize = 0; central.forEach(c => cdSize += c.length);
+  const eocd = new Uint8Array(22);
+  const edv = new DataView(eocd.buffer);
+  edv.setUint32(0, 0x06054b50, true);
+  edv.setUint16(4, 0, true);
+  edv.setUint16(6, 0, true);
+  edv.setUint16(8, files.length, true);
+  edv.setUint16(10, files.length, true);
+  edv.setUint32(12, cdSize, true);
+  edv.setUint32(16, offset, true);
+  edv.setUint16(20, 0, true);
+
+  let total = 0;
+  chunks.forEach(c => total += c.length);
+  central.forEach(c => total += c.length);
+  total += eocd.length;
+  const out = new Uint8Array(total);
+  let pos = 0;
+  chunks.forEach(c => { out.set(c, pos); pos += c.length; });
+  central.forEach(c => { out.set(c, pos); pos += c.length; });
+  out.set(eocd, pos);
+  return out;
+}
+
+// ---------- 极简 ZIP 读取（支持 store + deflate） ----------
+function readZip(bytes){
+  let eocdIdx = -1;
+  for(let i = bytes.length - 22; i >= 0; i--){
+    if(bytes[i] === 0x50 && bytes[i+1] === 0x4b && bytes[i+2] === 0x05 && bytes[i+3] === 0x06){ eocdIdx = i; break; }
+  }
+  if(eocdIdx < 0) throw new Error('不是有效的 Word 文件（ZIP 结构无法识别）');
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const cdOffset = dv.getUint32(eocdIdx + 16, true);
+  const cdCount = dv.getUint16(eocdIdx + 10, true);
+  const result = {};
+  let p = cdOffset;
+  for(let i = 0; i < cdCount; i++){
+    if(dv.getUint32(p, true) !== 0x02014b50) break;
+    const compression = dv.getUint16(p + 10, true);
+    const compSize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const commentLen = dv.getUint16(p + 32, true);
+    const localOffset = dv.getUint32(p + 42, true);
+    const nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
+    const name = _dec(nameBytes);
+    const ldv = new DataView(bytes.buffer, bytes.byteOffset + localOffset, bytes.byteLength - localOffset);
+    const lNameLen = ldv.getUint16(26, true);
+    const lExtraLen = ldv.getUint16(28, true);
+    const dataStart = localOffset + 30 + lNameLen + lExtraLen;
+    const data = bytes.subarray(dataStart, dataStart + compSize);
+    if(compression === 0){
+      result[name] = data;
+    } else if(compression === 8){
+      result[name] = inflateRaw(data);
+    } else {
+      throw new Error('不支持的压缩方式 ' + compression);
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return result;
+}
+
+// ---------- 极简 DEFLATE（raw）解压，用于读取 Word 生成的 .docx ----------
+const _LEN_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+const _LEN_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+const _DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+const _DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+
+function _buildHuffman(lengths){
+  const sym = [];
+  for(let i = 0; i < lengths.length; i++){ if(lengths[i] > 0) sym.push([lengths[i], i]); }
+  sym.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let code = 0, len = 0;
+  const codes = {};
+  for(const pair of sym){
+    const l = pair[0], s = pair[1];
+    if(l > len){ code <<= (l - len); len = l; }
+    codes[s] = {code: code, len: l};
+    code++;
+  }
+  const root = [null, null];
+  for(const s in codes){
+    const c = codes[s].code, l = codes[s].len;
+    let node = root;
+    for(let i = l - 1; i >= 0; i--){
+      const bit = (c >> i) & 1;
+      if(i === 0){
+        node[bit] = Number(s);
+      } else {
+        if(node[bit] === null || node[bit] === undefined) node[bit] = [null, null];
+        node = node[bit];
+      }
+    }
+  }
+  return root;
+}
+
+function inflateRaw(input){
+  let bitBuf = 0, bitCnt = 0, pos = 0;
+  function getBit(){
+    if(bitCnt === 0){ bitBuf = input[pos++]; bitCnt = 8; }
+    const b = bitBuf & 1;
+    bitBuf >>= 1;
+    bitCnt--;
+    return b;
+  }
+  function getBits(n){
+    let v = 0;
+    for(let i = 0; i < n; i++){ v |= getBit() << i; }
+    return v;
+  }
+  function decode(tree){
+    let node = tree;
+    while(true){
+      const bit = getBit();
+      node = node[bit];
+      if(typeof node === 'number') return node;
+      if(node === null || node === undefined) throw new Error('Huffman 解码失败');
+    }
+  }
+  const out = [];
+  while(true){
+    const bfinal = getBit();
+    const btype = getBits(2);
+    let litTree, distTree;
+    if(btype === 0){
+      bitCnt = 0;
+      const len = input[pos] | (input[pos + 1] << 8);
+      pos += 4;
+      for(let i = 0; i < len; i++) out.push(input[pos++]);
+    } else {
+      if(btype === 1){
+        const ll = new Array(288);
+        for(let i = 0; i < 144; i++) ll[i] = 8;
+        for(let i = 144; i < 256; i++) ll[i] = 9;
+        for(let i = 256; i < 280; i++) ll[i] = 7;
+        for(let i = 280; i < 288; i++) ll[i] = 8;
+        const d = new Array(30).fill(5);
+        litTree = _buildHuffman(ll);
+        distTree = _buildHuffman(d);
+      } else if(btype === 2){
+        const hlit = getBits(5) + 257;
+        const hdist = getBits(5) + 1;
+        const hclen = getBits(4) + 4;
+        const order = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+        const clLen = new Array(19).fill(0);
+        for(let i = 0; i < hclen; i++) clLen[order[i]] = getBits(3);
+        const clTree = _buildHuffman(clLen);
+        const lengths = new Array(hlit + hdist);
+        let idx = 0;
+        while(idx < hlit + hdist){
+          const sym = decode(clTree);
+          if(sym < 16){ lengths[idx++] = sym; }
+          else if(sym === 16){ const rep = getBits(2) + 3; const prev = (idx > 0) ? lengths[idx - 1] : 0; for(let i = 0; i < rep; i++) lengths[idx++] = prev; }
+          else if(sym === 17){ const rep = getBits(3) + 3; for(let i = 0; i < rep; i++) lengths[idx++] = 0; }
+          else if(sym === 18){ const rep = getBits(7) + 11; for(let i = 0; i < rep; i++) lengths[idx++] = 0; }
+        }
+        litTree = _buildHuffman(lengths.slice(0, hlit));
+        distTree = _buildHuffman(lengths.slice(hlit, hlit + hdist));
+      } else {
+        throw new Error('不支持的 DEFLATE 块类型 ' + btype);
+      }
+      while(true){
+        const sym = decode(litTree);
+        if(sym === 256) break;
+        if(sym < 256){ out.push(sym); }
+        else {
+          const li = sym - 257;
+          const length = _LEN_BASE[li] + getBits(_LEN_EXTRA[li]);
+          const dsym = decode(distTree);
+          const dist = _DIST_BASE[dsym] + getBits(_DIST_EXTRA[dsym]);
+          for(let i = 0; i < length; i++) out.push(out[out.length - dist]);
+        }
+      }
+    }
+    if(bfinal) break;
+  }
+  return new Uint8Array(out);
+}
+
+// ---------- Word 文档内容生成 ----------
+function _runText(text, opts){
+  const rpr = (opts.bold ? '<w:b/>' : '') + (opts.size ? `<w:sz w:val="${opts.size}"/>` : '');
+  const escaped = escapeXml(text).replace(/\n/g, '<w:br/>');
+  return `<w:r><w:rPr>${rpr}</w:rPr><w:t xml:space="preserve">${escaped}</w:t></w:r>`;
+}
+function _para(text, opts){
+  opts = opts || {};
+  const jc = opts.align ? `<w:jc w:val="${opts.align}"/>` : '';
+  return `<w:p><w:pPr>${jc}</w:pPr>${_runText(text, opts)}</w:p>`;
+}
+
+function notesToDocxXml(notes){
+  // 按书名分组
+  const groups = {};
+  const order = [];
+  for(const n of notes){
+    const book = state.books.find(b => b.id === n.bookId);
+    const title = book ? book.title : '未分类';
+    if(!groups[title]){ groups[title] = []; order.push(title); }
+    groups[title].push(n);
+  }
+  let body = '';
+  body += _para('税法重点笔记', {align:'center', bold:true, size:32});
+  body += _para('导出时间：' + new Date().toLocaleString('zh-CN'), {align:'center', size:20});
+  body += _para('', {});
+  for(const title of order){
+    for(const n of groups[title]){
+      body += _para(`《${title}》 第 ${n.page} 节`, {bold:true, size:24});
+      body += _para(n.text || '', {});
+      body += _para('', {});
+    }
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="${W_NS}"><w:body>${body}<w:sectPr/></w:body></w:document>`;
+}
+
+function exportNotesWord(){
+  const notes = state.notes.filter(n => !n.archived);
+  if(notes.length === 0){ showToast('还没有笔记可导出', 'error'); return; }
+  const xml = notesToDocxXml(notes);
+  const files = [
+    {name:'[Content_Types].xml', data:_enc('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')},
+    {name:'_rels/.rels', data:_enc('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>')},
+    {name:'word/document.xml', data:_enc(xml)},
+    {name:'word/_rels/document.xml.rels', data:_enc('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>')},
+    {name:'docProps/core.xml', data:_enc('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>税法重点笔记</dc:title><dc:creator>税法知识点查询工具</dc:creator></cp:coreProperties>')}
+  ];
+  const zip = makeZip(files);
+  const blob = new Blob([zip], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `税法重点笔记_${ts}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出 Word 文档 ✓', 'success');
+}
+
+// ---------- Word 文档解析 ----------
+function _paragraphText(pEl){
+  let text = '';
+  function walk(node){
+    if(node.nodeType === 3){ text += node.nodeValue; }
+    else if(node.nodeType === 1){
+      const local = node.localName || (node.nodeName.split(':')[1]) || node.nodeName;
+      if(local === 'br') text += '\n';
+      else if(local === 'tab') text += '\t';
+      if(node.childNodes){ for(let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]); }
+    }
+  }
+  walk(pEl);
+  return text;
+}
+
+function findBookByTitle(title){
+  const t = (title || '').trim();
+  if(!t) return null;
+  let exact = state.books.find(b => (b.title || '').trim() === t);
+  if(exact) return exact;
+  let contains = state.books.find(b => (b.title || '').includes(t) || t.includes(b.title || ''));
+  return contains || null;
+}
+
+function parseNoteParagraphs(paragraphs){
+  const headerRe = /^《(.+?)》\s*第\s*(.+?)\s*节$/;
+  let curBook = null, curPage = null;
+  const items = [];
+  let skipped = 0;
+  for(const raw of paragraphs){
+    const line = raw.trim();
+    if(!line) continue;
+    const m = line.match(headerRe);
+    if(m){
+      const book = findBookByTitle(m[1]);
+      curBook = book ? book.id : null;
+      curPage = m[2].trim();
+      continue;
+    }
+    if(!curBook){ skipped++; continue; }
+    items.push({bookId: curBook, page: curPage, text: raw});
+  }
+  return {items, count: items.length, skipped};
+}
+
+function showImportWordModal(){
+  showModal(`
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      从 Word 导入笔记
+    </div>
+    <div class="form-row">
+      <label class="form-label">选择 Word 文档（.docx / .doc）</label>
+      <input type="file" id="wordFile" accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="form-input">
+      <div class="form-hint">支持本工具导出的 .docx，也可在 Word/WPS 里编辑后重新导入；手写的文档请让每条笔记以「《书名》 第X节」起头，且书名需与书库中的书一致。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-accent" onclick="confirmImportWord()">导入</button>
+    </div>
+  `);
+}
+
+function confirmImportWord(){
+  const file = document.getElementById('wordFile');
+  if(!file || !file.files || !file.files[0]){ showToast('请先选择文件', 'error'); return; }
+  const f = file.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const buf = new Uint8Array(e.target.result);
+      let paragraphs = [];
+      try{
+        const zip = readZip(buf);
+        const xmlBytes = zip['word/document.xml'];
+        if(!xmlBytes) throw new Error('未找到 word/document.xml');
+        const xml = _dec(xmlBytes);
+        const doc = new DOMParser().parseFromString(xml, 'application/xml');
+        const paras = doc.getElementsByTagNameNS(W_NS, 'p');
+        paragraphs = Array.from(paras).map(_paragraphText);
+      }catch(err){
+        // 不是 .docx（可能是 Word 导出的 .doc / HTML），按 HTML 解析
+        const text = _dec(buf);
+        const hdoc = new DOMParser().parseFromString(text, 'text/html');
+        const ps = hdoc.querySelectorAll('p, div');
+        paragraphs = Array.from(ps).map(p => p.textContent || '');
+        if(paragraphs.length === 0) paragraphs = text.split(/\r?\n/);
+      }
+      const result = parseNoteParagraphs(paragraphs);
+      if(result.count === 0){
+        showToast('没有解析到笔记，请确认文档格式（书名需与书库一致）', 'error');
+        return;
+      }
+      const notes = getNotes();
+      const existing = new Set(notes.map(n => (n.bookId || '') + '|' + (n.page || '') + '|' + (n.text || '').trim()));
+      let added = 0;
+      for(const item of result.items){
+        const key = (item.bookId || '') + '|' + (item.page || '') + '|' + (item.text || '').trim();
+        if(existing.has(key)) continue;
+        notes.unshift({id: genId(), bookId: item.bookId, page: item.page, text: item.text.trim(), createdAt: Date.now(), lastReviewedAt: null, archived: false});
+        added++;
+      }
+      saveNotes(notes);
+      state.notes = notes;
+      closeModal();
+      const dup = result.count - added;
+      showToast(`已导入 ${added} 条笔记${dup > 0 ? '（跳过 ' + dup + ' 条重复）' : ''}`, 'success');
+      render();
+    }catch(err){
+      showToast('解析失败：' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
 }
 
 // ============== 模态框底层 ==============
