@@ -396,7 +396,8 @@ let state = {
   expandedPage: null,
   // 阅读视图
   readingPageIdx: 0,  // 当前阅读的页索引（相对当前书的 pages 数组）
-  pendingHighlightKeyword: ''  // 跳转到阅读页时高亮的关键词（首次出现位置特殊标记）
+  pendingHighlightKeyword: '',  // 跳转到阅读页时高亮的关键词
+  pendingHighlightOccurrence: 0  // 要定位到的具体命中序号（0-based）
 };
 
 // ============== 预置示例数据 ==============
@@ -466,16 +467,28 @@ function searchInBook(book, keyword){
 }
 
 function extractContexts(text, keyword, positions){
-  // 按中文标点和换行切分
-  const segments = [];
-  const re = /[^。！？!?\n]+[。！？!?\n]?/g;
-  let m;
-  while((m = re.exec(text)) !== null){
-    segments.push({start: m.index, end: m.index + m[0].length, text: m[0]});
+  // 每个命中位置提取一句上下文，保证 contexts[i] 对应 positions[i]
+  return positions.map(pos => {
+    const start = findSentenceStart(text, pos);
+    const end = findSentenceEnd(text, pos + keyword.length);
+    return text.slice(start, end).trim();
+  });
+}
+
+function findSentenceStart(text, pos){
+  const delims = '。！？!?';
+  for(let i = pos - 1; i >= 0; i--){
+    if(delims.includes(text[i]) || text[i] === '\n') return i + 1;
   }
-  // 找到包含关键词的段落
-  const hits = segments.filter(s => s.text.toLowerCase().includes(keyword.toLowerCase()));
-  return hits.map(s => s.text).slice(0, 6);
+  return 0;
+}
+
+function findSentenceEnd(text, pos){
+  const delims = '。！？!?';
+  for(let i = pos; i < text.length; i++){
+    if(delims.includes(text[i]) || text[i] === '\n') return i + 1;
+  }
+  return text.length;
 }
 
 function highlightText(text, keyword){
@@ -505,14 +518,15 @@ function highlightReadingText(text, keyword){
 }
 
 // 进阶渲染：同时处理 关键词高亮 + 笔记来源锚点，输出到 #readingContent
-function renderReadingContent(text, keyword, noteAnchors){
-  const events = []; // {pos, end, type, id?, first?}
+// targetIdx：要精准定位到的那个关键词命中序号（0-based），该处加 first-hl 并带 id 便于滚动
+function renderReadingContent(text, keyword, noteAnchors, targetIdx = 0){
+  const events = []; // {pos, end, type, id?, occurrence?}
   if(keyword && keyword.trim()){
     const re = new RegExp(escapeReg(keyword.trim()), 'gi');
-    let m, first = true;
+    let m, occurrence = 0;
     while((m = re.exec(text)) !== null){
-      events.push({pos: m.index, end: m.index + m[0].length, type: 'kw', first: first});
-      first = false;
+      events.push({pos: m.index, end: m.index + m[0].length, type: 'kw', occurrence: occurrence});
+      occurrence++;
     }
   }
   (noteAnchors || []).forEach(a => {
@@ -525,7 +539,6 @@ function renderReadingContent(text, keyword, noteAnchors){
 
   let html = '';
   let openKw = false;
-  let firstKwDone = false;
   const openNotes = new Set();
   for(let i = 0; i <= text.length; i++){
     // 在 i 处开始的事件（开标签）
@@ -533,9 +546,13 @@ function renderReadingContent(text, keyword, noteAnchors){
     starts.forEach(e => {
       if(e.type === 'kw'){
         if(!openKw){
-          html += e.first ? '<mark class="first-hl">' : '<mark>';
+          // 仅目标命中处加 first-hl 并带 id，方便 scrollIntoView 精准定位
+          if(e.occurrence === targetIdx){
+            html += `<mark id="kw-hit-${targetIdx}" class="first-hl">`;
+          } else {
+            html += '<mark>';
+          }
           openKw = true;
-          firstKwDone = true;
         }
       } else if(e.type === 'note'){
         if(!openNotes.has(e.id)){
@@ -812,7 +829,7 @@ function renderSearchResultCard(book, r){
   const noteAlready = state.notes.find(n => n.bookId === book.id && n.page === r.page);
   return `
     <div class="search-result">
-      <div class="search-result-head" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword)" title="点击跳到阅读视图并定位关键词">
+      <div class="search-result-head" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword, 0)" title="点击跳到阅读视图并定位到第 1 处关键词">
         <div class="search-page">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           《${escapeHtml(book.title)}》 第 ${r.page} 节
@@ -821,7 +838,7 @@ function renderSearchResultCard(book, r){
         <div class="search-count">命中 ${r.count} 处</div>
       </div>
       ${r.contexts.map((ctx, i) => `
-        <div class="context-snippet" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword)" title="点击跳到阅读视图并定位关键词">
+        <div class="context-snippet" style="cursor:pointer" onclick="jumpToPageAndRead('${r.page}', state.searchKeyword, ${i})" title="点击跳到阅读视图并定位到第 ${i+1} 处关键词">
           <span style="color:var(--muted-2);font-size:11px;margin-right:6px">[${i+1}/${r.count}]</span>${highlightText(ctx, state.searchKeyword)}
         </div>
       `).join('')}
@@ -1062,7 +1079,7 @@ function renderReadView(){
         <span style="color:var(--accent);font-weight:600">${escapeHtml(curPage.page)}</span>
       </div>
 
-      <div id="readingContent" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;min-height:280px;max-height:520px;overflow-y:auto;font-size:16px;line-height:1.9;color:var(--text);white-space:pre-wrap">${renderReadingContent(curPage.text, state.pendingHighlightKeyword, getNoteAnchorsForPage(book.id, curPage.page))}</div>
+      <div id="readingContent" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;min-height:280px;max-height:520px;overflow-y:auto;font-size:16px;line-height:1.9;color:var(--text);white-space:pre-wrap">${renderReadingContent(curPage.text, state.pendingHighlightKeyword, getNoteAnchorsForPage(book.id, curPage.page), state.pendingHighlightOccurrence)}</div>
 
       <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-ghost" onclick="readingJumpTo(0)" style="flex:0 0 auto;min-width:60px">
@@ -1112,42 +1129,45 @@ function readingJumpTo(idx){
   state.readingPageIdx = idx;
   render();
 }
-function jumpToPageAndRead(pageLabel, keyword){
+function jumpToPageAndRead(pageLabel, keyword, occurrenceIdx = 0){
   const book = state.books.find(b => b.id === state.currentBookId);
   if(!book) return;
   const idx = book.pages.findIndex(p => String(p.page) === String(pageLabel));
   if(idx >= 0){
     state.readingPageIdx = idx;
     state.pendingHighlightKeyword = keyword || '';
+    state.pendingHighlightOccurrence = occurrenceIdx || 0;
     state.currentView = 'read';
     render();
     if(keyword){
-      // 渲染完后滚动到关键词首次出现位置
-      setTimeout(() => scrollToKeyword(keyword), 80);
+      // 渲染完后滚动到关键词指定命中处
+      setTimeout(() => scrollToKeyword(keyword, state.pendingHighlightOccurrence), 80);
     } else {
       showToast(`已跳到 ${book.title} 第 ${pageLabel} 节`, 'success');
     }
   }
 }
 
-// 在阅读视图里滚动到关键词首次出现位置并高亮
-function scrollToKeyword(keyword){
+// 在阅读视图里滚动到关键词指定命中处并高亮
+function scrollToKeyword(keyword, occurrenceIdx = 0){
   if(!keyword) return;
   const container = document.getElementById('readingContent');
   if(!container) return;
-  // 找到首个 mark 元素（renderReadView 会把关键词包成 mark.first-hl）
-  const mark = container.querySelector('mark.first-hl');
+  // 精准定位：renderReadingContent 给目标命中处包了 mark#kw-hit-N
+  const mark = container.querySelector(`mark#kw-hit-${occurrenceIdx}`);
   if(mark){
     mark.scrollIntoView({behavior: 'smooth', block: 'center'});
     // 加个临时动画class
     mark.classList.add('hl-flash');
     setTimeout(() => mark.classList.remove('hl-flash'), 2000);
-    showToast(`已定位到"${keyword}"首次出现位置`, 'success');
+    showToast(`已定位到"${keyword}"第 ${occurrenceIdx + 1} 处`, 'success');
   } else {
-    // 没找到（页面没关键词），只滚动顶部
+    // 没找到（理论上不会发生），只滚动顶部
     container.scrollTop = 0;
     showToast(`已跳到该节（关键词不在这一节）`, 'success');
   }
+  // 定位完成后清除，避免翻页时串位到错误的"第 N 处"
+  state.pendingHighlightOccurrence = 0;
 }
 
 function openTOC(){
@@ -1495,8 +1515,9 @@ function jumpToNote(noteId){
     const kw = (n.text || '').slice(0, 40).trim();
     if(kw){
       state.pendingHighlightKeyword = kw;
+      state.pendingHighlightOccurrence = 0; // 旧笔记回退：定位到关键词第一处
       render();
-      setTimeout(() => scrollToKeyword(kw), 80);
+      setTimeout(() => scrollToKeyword(kw, 0), 80);
     } else {
       showToast(`已跳到《${book ? book.title : ''}》第 ${n.page} 节`, 'success');
     }
